@@ -1,26 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalkulator marży</title>
 </head>
 <body>
     <h1>Kalkulator marży</h1>
     <form method="POST">
         <label for="cena_zakupu">Cena zakupu:</label>
-        <input type="text" id="cena_zakupu" name="cena_zakupu" required><br><br>
+        <input type="text" id="cena_zakupu" name="cena_zakupu" value="{{ cena_zakupu_input }}" required>
+        <br>
         <label for="cena_sprzedazy">Cena sprzedaży:</label>
-        <input type="text" id="cena_sprzedazy" name="cena_sprzedazy" required><br><br>
+        <input type="text" id="cena_sprzedazy" name="cena_sprzedazy" value="{{ cena_sprzedazy_input }}" required>
+        <br>
         <label for="kategoria">Kategoria:</label>
-        <select id="kategoria" name="kategoria">
-            <option value="A">A - Supermarket</option>
-            <option value="B">B - Cukier</option>
-            <option value="C">C - Chemia gospodarcza</option>
-            <option value="D">D - AGD zwykłe</option>
-            <option value="E">E - Elektronika</option>
-            <option value="F">F - Chemia do 60 zł</option>
-            <option value="G">G - Sklep internetowy</option>
-        </select><br><br>
+        <select id="kategoria" name="kategoria" required>
+            <option value="A" {% if kategoria_input == "A" %}selected{% endif %}>Supermarket</option>
+            <option value="B" {% if kategoria_input == "B" %}selected{% endif %}>Cukier</option>
+            <option value="C" {% if kategoria_input == "C" %}selected{% endif %}>Chemia gospodarcza</option>
+            <option value="D" {% if kategoria_input == "D" %}selected{% endif %}>AGD zwykłe</option>
+            <option value="E" {% if kategoria_input == "E" %}selected{% endif %}>Elektronika</option>
+            <option value="F" {% if kategoria_input == "F" %}selected{% endif %}>Chemia do 60 zł</option>
+            <option value="G" {% if kategoria_input == "G" %}selected{% endif %}>Sklep internetowy</option>
+        </select>
+        <br>
         <button type="submit">Oblicz</button>
     </form>
+
+    {% if wynik %}
+    <h2>Wynik:</h2>
+    <pre>{{ wynik }}</pre>
+    {% endif %}
 </body>
 </html>
