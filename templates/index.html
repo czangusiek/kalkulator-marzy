@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kalkulator marży</title>
+</head>
+<body>
+    <h1>Kalkulator marży</h1>
+    <form method="POST">
+        <label for="cena_zakupu">Cena zakupu:</label>
+        <input type="text" id="cena_zakupu" name="cena_zakupu" required><br><br>
+        <label for="cena_sprzedazy">Cena sprzedaży:</label>
+        <input type="text" id="cena_sprzedazy" name="cena_sprzedazy" required><br><br>
+        <label for="kategoria">Kategoria:</label>
+        <select id="kategoria" name="kategoria">
+            <option value="A">A - Supermarket</option>
+            <option value="B">B - Cukier</option>
+            <option value="C">C - Chemia gospodarcza</option>
+            <option value="D">D - AGD zwykłe</option>
+            <option value="E">E - Elektronika</option>
+            <option value="F">F - Chemia do 60 zł</option>
+            <option value="G">G - Sklep internetowy</option>
+        </select><br><br>
+        <button type="submit">Oblicz</button>
+    </form>
+</body>
+</html>
