@@ -6,8 +6,8 @@
     <title>Kalkulator marży i VAT</title>
     <style>
         .wynik {
-            font-size: 16px; /* Zwiększona czcionka o 4 punkty */
-            line-height: 1.6; /* Odstęp między liniami */
+            font-size: 16px;
+            line-height: 1.6;
         }
         .wynik table {
             width: 100%;
@@ -23,14 +23,14 @@
             background-color: #f2f2f2;
         }
         .wynik strong {
-            font-weight: bold; /* Pogrubienie liczb */
+            font-weight: bold;
         }
         hr {
-            border: 1px dashed #ccc; /* Linia przerywana */
-            margin: 20px 0; /* Odstęp przed i po linii */
+            border: 1px dashed #ccc;
+            margin: 20px 0;
         }
         .inna-prowizja {
-            display: none; /* Domyślnie ukryte pole dla kategorii H */
+            display: none;
         }
         .kalkulator-vat {
             margin-top: 40px;
@@ -65,63 +65,52 @@
         <div class="kalkulator">
             <h2>Kalkulator marży</h2>
             <form method="POST" onsubmit="toggleInnaProwizja()">
+                {{ form_marza.hidden_tag() }}
                 <label for="cena_zakupu">Cena zakupu:</label>
-                <input type="text" id="cena_zakupu" name="cena_zakupu" value="{{ cena_zakupu_input }}" required>
+                {{ form_marza.cena_zakupu(size=20) }}
                 <br>
                 <label for="cena_sprzedazy">Cena sprzedaży:</label>
-                <input type="text" id="cena_sprzedazy" name="cena_sprzedazy" value="{{ cena_sprzedazy_input }}" required>
+                {{ form_marza.cena_sprzedazy(size=20) }}
                 <br>
                 <label for="kategoria">Kategoria:</label>
-                <select id="kategoria" name="kategoria" required onchange="toggleInnaProwizja()">
-                    <option value="A" {% if kategoria_input == "A" %}selected{% endif %}>Supermarket (6,15%)</option>
-                    <option value="B" {% if kategoria_input == "B" %}selected{% endif %}>Cukier (12,92%)</option>
-                    <option value="C" {% if kategoria_input == "C" %}selected{% endif %}>Chemia gospodarcza (12,92%)</option>
-                    <option value="D" {% if kategoria_input == "D" %}selected{% endif %}>AGD zwykłe (13,53%)</option>
-                    <option value="E" {% if kategoria_input == "E" %}selected{% endif %}>Elektronika (5,55%)</option>
-                    <option value="F" {% if kategoria_input == "F" %}selected{% endif %}>Chemia do 60 zł (18,45% / 9,84%)</option>
-                    <option value="G" {% if kategoria_input == "G" %}selected{% endif %}>Sklep internetowy</option>
-                    <option value="H" {% if kategoria_input == "H" %}selected{% endif %}>Inna prowizja</option>
-                </select>
+                {{ form_marza.kategoria(onchange="toggleInnaProwizja()") }}
                 <br>
                 <div id="inna-prowizja-div" class="inna-prowizja">
                     <label for="inna_prowizja">Procent prowizji:</label>
-                    <input type="text" id="inna_prowizja" name="inna_prowizja" value="{{ inna_prowizja_input }}">
+                    {{ form_marza.inna_prowizja(size=20) }}
                     <br>
                 </div>
                 <label for="ilosc_sztuk">Ilość sztuk:</label>
-                <input type="text" id="ilosc_sztuk" name="ilosc_sztuk" value="{{ ilosc_sztuk_input }}" required>
+                {{ form_marza.ilosc_sztuk(size=20) }}
                 <br>
-                <button type="submit">Oblicz</button>
+                {{ form_marza.submit() }}
             </form>
 
-            {% if wynik %}
+            {% if wynik_marza %}
             <h2>Wynik:</h2>
-            <div class="wynik">{{ wynik | safe }}</div>
+            <div class="wynik">{{ wynik_marza | safe }}</div>
             {% endif %}
         </div>
 
         <div class="kalkulator">
             <h2>Kalkulator VAT</h2>
             <form method="POST">
+                {{ form_vat.hidden_tag() }}
                 <label for="cena_netto">Wpisz cenę netto:</label>
-                <input type="text" id="cena_netto" name="cena_netto" value="{{ cena_netto_input }}" required>
+                {{ form_vat.cena_netto(size=20) }}
                 <br>
                 <label for="vat">Wybierz podatek VAT:</label>
-                <select id="vat" name="vat" required>
-                    <option value="5" {% if vat_input == "5" %}selected{% endif %}>5%</option>
-                    <option value="8" {% if vat_input == "8" %}selected{% endif %}>8%</option>
-                    <option value="23" {% if vat_input == "23" %}selected{% endif %}>23%</option>
-                </select>
+                {{ form_vat.vat() }}
                 <br>
                 <label for="koszt_dostawy_sztuka">Wpisz koszt dostawy na sztukę:</label>
-                <input type="text" id="koszt_dostawy_sztuka" name="koszt_dostawy_sztuka" value="{{ koszt_dostawy_sztuka_input }}">
+                {{ form_vat.koszt_dostawy_sztuka(size=20) }}
                 <br>
                 <label for="kwota_dostawy">Lub wpisz kwotę dostawy:</label>
-                <input type="text" id="kwota_dostawy" name="kwota_dostawy" value="{{ kwota_dostawy_input }}">
+                {{ form_vat.kwota_dostawy(size=20) }}
                 <label for="ilosc_sztuk">i ilość sztuk:</label>
-                <input type="text" id="ilosc_sztuk" name="ilosc_sztuk" value="{{ ilosc_sztuk_vat_input }}">
+                {{ form_vat.ilosc_sztuk(size=20) }}
                 <br>
-                <button type="submit">Oblicz</button>
+                {{ form_vat.submit() }}
             </form>
 
             {% if wynik_vat %}
