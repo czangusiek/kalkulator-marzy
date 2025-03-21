@@ -1,3 +1,4 @@
+# Dodano komentarz w app.py
 import os
 from flask import Flask, request, render_template, session, redirect, url_for
 from flask_wtf import FlaskForm
