@@ -17,7 +17,7 @@ class KalkulatorMarzyForm(FlaskForm):
         ('C', 'Chemia gospodarcza (12,92%)'),
         ('D', 'AGD zwykłe (13,53%)'),
         ('E', 'Elektronika (5,55%)'),
-        ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
+        ('F', 'Chemia (18,45% / 9,84%)'),
         ('G', 'Sklep internetowy'),
         ('H', 'Inna prowizja')
     ], validators=[DataRequired()])
@@ -53,7 +53,7 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=N
         prowizja = cena_sprzedazy * 0.1353
     elif kategoria == "E":  # Elektronika
         prowizja = cena_sprzedazy * 0.0555
-    elif kategoria == "F":  # Chemia do 60 zł
+    elif kategoria == "F":  # Chemia
         if cena_sprzedazy <= 60:
             prowizja = cena_sprzedazy * 0.1845
         else:
