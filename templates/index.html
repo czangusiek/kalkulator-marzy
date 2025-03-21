@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalkulator marży</title>
+    <style>
+        .wynik {
+            font-size: 16px; /* Zwiększona czcionka o 4 punkty (domyślnie 12px) */
+            line-height: 2; /* Dodaje odstęp między liniami */
+        }
+        .wynik strong {
+            font-weight: bold; /* Pogrubienie liczb */
+        }
+    </style>
 </head>
 <body>
     <h1>Kalkulator marży</h1>
@@ -30,7 +39,7 @@
 
     {% if wynik %}
     <h2>Wynik:</h2>
-    <pre>{{ wynik | safe }}</pre>
+    <div class="wynik">{{ wynik | safe }}</div>
     {% endif %}
 </body>
 </html>

@@ -84,7 +84,7 @@ def index():
                 f"Maksymalny koszt (przy darmowej wysyłce): <strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł\n"
                 f"Marża przy darmowej wysyłce: <strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł\n"
                 f"Marża maksymalna: <strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł\n"
-                f"Sugerowana cena sprzedaży na sklepie: <strong style='color:green;'>{sugerowana_cena:.2f}</strong> zł"
+                f"Sugerowana cena sprzedaży na sklepie: <strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł"
             )
         else:
             # Oblicz koszty dostawy
