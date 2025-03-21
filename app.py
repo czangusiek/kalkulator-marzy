@@ -53,8 +53,9 @@ def oblicz_dostawe_maksymalna(cena_sprzedazy):
     else:
         return 0  # Dostawa maksymalna tylko dla kwot ≤ 100 zł
 
-def oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, marza):
-    return cena_zakupu + marza + prowizja_z_dostawa
+def oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, marza_procent):
+    # Oblicza sugerowaną cenę sprzedaży, uwzględniając marżę procentową po odliczeniu prowizji z dostawą
+    return (cena_zakupu + prowizja_z_dostawa) / (1 - marza_procent / 100)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -98,14 +99,15 @@ def index():
             prowizja_z_dostawa_min = prowizja_min + dostawa_minimalna
             prowizja_z_dostawa_max = prowizja_max + dostawa_maksymalna
 
-            # Oblicz sugerowane ceny sprzedaży
+            # Wybierz najwyższą prowizję z dostawą
             if cena_sprzedazy <= 100:
                 prowizja_z_dostawa = prowizja_z_dostawa_max  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
             else:
                 prowizja_z_dostawa = prowizja_z_dostawa_min  # Dla kwot > 100 zł używamy dostawy minimalnej
 
-            sugerowana_cena_min = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, 2)  # Marża 2 zł
-            sugerowana_cena_15 = cena_zakupu / 0.85  # Marża 15%
+            # Oblicz sugerowane ceny sprzedaży
+            sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa + 2  # Minimalna cena (marża 2 zł)
+            sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, 15)  # Marża 15%
 
             if cena_sprzedazy < 30:
                 marza = cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max
