@@ -30,7 +30,7 @@
 
     {% if wynik %}
     <h2>Wynik:</h2>
-    <pre>{{ wynik }}</pre>
+    <pre>{{ wynik | safe }}</pre>
     {% endif %}
 </body>
 </html>

@@ -81,10 +81,10 @@ def index():
             sugerowana_cena = cena_zakupu / 0.84  # Sugerowana cena dla 15% marży
 
             wynik = (
-                f"Maksymalny koszt (przy darmowej wysyłce): {maksymalny_koszt:.2f} zł\n"
-                f"Marża przy darmowej wysyłce: {marza_darmowa_wysylka:.2f} zł\n"
-                f"Marża maksymalna: {marza_maksymalna:.2f} zł\n"
-                f"Sugerowana cena sprzedaży na sklepie: {sugerowana_cena:.2f} zł"
+                f"Maksymalny koszt (przy darmowej wysyłce): <strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł\n"
+                f"Marża przy darmowej wysyłce: <strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł\n"
+                f"Marża maksymalna: <strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł\n"
+                f"Sugerowana cena sprzedaży na sklepie: <strong style='color:green;'>{sugerowana_cena:.2f}</strong> zł"
             )
         else:
             # Oblicz koszty dostawy
@@ -98,25 +98,31 @@ def index():
             if cena_sprzedazy < 30:
                 marza = cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max
                 wynik = (
-                    f"Marża (dostawa maksymalna): {marza:.2f} zł\n"
-                    f"Prowizja z dostawą maksymalną: {prowizja_z_dostawa_max:.2f} zł"
+                    f"Marża (dostawa maksymalna): <strong style='color:green;'>{marza:.2f}</strong> zł\n"
+                    f"Prowizja z dostawą maksymalną: <strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł"
                 )
             elif 30 <= cena_sprzedazy <= 100:
                 marza_dla_1_sztuki = cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min
                 marza_minimalna = cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max
                 wynik = (
-                    f"Marża dla 1 sztuki (dostawa minimalna): {marza_dla_1_sztuki:.2f} zł\n"
-                    f"Marża minimalna (dostawa maksymalna): {marza_minimalna:.2f} zł\n"
-                    f"Prowizja z dostawą minimalną: {prowizja_z_dostawa_min:.2f} zł\n"
-                    f"Prowizja z dostawą maksymalną: {prowizja_z_dostawa_max:.2f} zł"
+                    f"Marża dla 1 sztuki (dostawa minimalna): <strong style='color:green;'>{marza_dla_1_sztuki:.2f}</strong> zł\n"
+                    f"Marża minimalna (dostawa maksymalna): <strong style='color:green;'>{marza_minimalna:.2f}</strong> zł\n"
+                    f"Prowizja z dostawą minimalną: <strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł\n"
+                    f"Prowizja z dostawą maksymalną: <strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł"
                 )
             else:
                 marza = cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min
-                wynik = (
-                    f"Marża (dostawa minimalna): {marza:.2f} zł\n"
-                    f"Prowizja z dostawą minimalną: {prowizja_z_dostawa_min:.2f} zł\n"
-                    f"Prowizja z dostawą maksymalną: {prowizja_z_dostawa_max:.2f} zł"
-                )
+                if kategoria in ["A", "B", "C", "D", "E", "F"]:
+                    wynik = (
+                        f"Marża (dostawa minimalna): <strong style='color:green;'>{marza:.2f}</strong> zł\n"
+                        f"Prowizja z dostawą minimalną: <strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł"
+                    )
+                else:
+                    wynik = (
+                        f"Marża (dostawa minimalna): <strong style='color:green;'>{marza:.2f}</strong> zł\n"
+                        f"Prowizja z dostawą minimalną: <strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł\n"
+                        f"Prowizja z dostawą maksymalną: <strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł"
+                    )
 
     return render_template(
         "index.html",
