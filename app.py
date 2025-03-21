@@ -143,6 +143,7 @@ def index():
                 f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
                 f"</table>"
             )
+            session['wynik_marza'] = wynik_marza  # Przypisz wyniki do sesji
         else:
             # Obliczenia dostawy dla innych kategorii
             dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy)
