@@ -1,107 +1,3 @@
-import os
-from flask import Flask, request, render_template, session, redirect, url_for
-from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
-
-app = Flask(__name__)
-app.secret_key = 'tajny_klucz'  # Wymagane przez Flask-WTF i sesję
-
-# Formularz dla pierwszego kalkulatora (marża)
-class KalkulatorMarzyForm(FlaskForm):
-    cena_zakupu = StringField('Cena zakupu:', validators=[DataRequired()])
-    cena_sprzedazy = StringField('Cena sprzedaży:', validators=[DataRequired()])
-    kategoria = SelectField('Kategoria:', choices=[
-        ('A', 'Supermarket (6,15%)'),
-        ('B', 'Cukier (12,92%)'),
-        ('C', 'Chemia gospodarcza (12,92%)'),
-        ('D', 'AGD zwykłe (13,53%)'),
-        ('E', 'Elektronika (5,55%)'),
-        ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
-        ('G', 'Sklep internetowy'),
-        ('H', 'Inna prowizja')
-    ], validators=[DataRequired()])
-    inna_prowizja = StringField('Procent prowizji:')
-    ilosc_w_zestawie = StringField('Ilość w zestawie:', default="1", validators=[DataRequired()])
-    submit = SubmitField('Oblicz')
-
-# Formularz dla drugiego kalkulatora (VAT)
-class KalkulatorVATForm(FlaskForm):
-    cena_netto = StringField('Wpisz cenę netto:', validators=[DataRequired()])
-    vat = SelectField('Wybierz podatek VAT:', choices=[
-        ('5', '5%'),
-        ('8', '8%'),
-        ('23', '23%')
-    ], default="23", validators=[DataRequired()])
-    koszt_dostawy_sztuka = StringField('Wpisz koszt dostawy na sztukę:', default="0")
-    kwota_dostawy = StringField('Lub wpisz kwotę dostawy:', default="0")
-    ilosc_w_dostawie = StringField('Ilość sztuk w dostawie:', default="1", validators=[DataRequired()])
-    submit = SubmitField('Oblicz')
-
-# Funkcje pomocnicze
-def zamien_przecinek_na_kropke(liczba):
-    return float(liczba.replace(",", "."))
-
-def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None):
-    if kategoria == "A":  # Supermarket
-        prowizja = cena_sprzedazy * 0.0615
-    elif kategoria == "B":  # Cukier
-        prowizja = cena_sprzedazy * 0.1292
-    elif kategoria == "C":  # Chemia gospodarcza
-        prowizja = cena_sprzedazy * 0.1292
-    elif kategoria == "D":  # AGD zwykłe
-        prowizja = cena_sprzedazy * 0.1353
-    elif kategoria == "E":  # Elektronika
-        prowizja = cena_sprzedazy * 0.0555
-    elif kategoria == "F":  # Chemia do 60 zł
-        if cena_sprzedazy <= 60:
-            prowizja = cena_sprzedazy * 0.1845
-        else:
-            prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
-    elif kategoria == "G":  # Sklep internetowy
-        prowizja = cena_sprzedazy * 0.01  # Prowizja 1%
-    elif kategoria == "H":  # Inna prowizja
-        if inna_prowizja is not None:
-            prowizja = cena_sprzedazy * (inna_prowizja / 100)
-        else:
-            prowizja = 0  # Domyślnie brak prowizji
-    else:
-        prowizja = 0  # Domyślnie brak prowizji
-
-    if promowanie and kategoria != "G":  # Kategoria G nie ma promowania
-        prowizja *= 1.75  # Zwiększ prowizję o 75% dla ofert promowanych
-
-    return prowizja, prowizja  # Zwróć tę samą wartość dla prowizji minimalnej i maksymalnej
-
-def oblicz_koszt_wysylki(cena_sprzedazy):
-    if cena_sprzedazy < 300:
-        return (cena_sprzedazy / 300) * 19.90  # Proporcjonalny koszt wysyłki
-    else:
-        return 19.90  # Stały koszt wysyłki
-
-def oblicz_dostawe_minimalna(cena_sprzedazy):
-    if 30 <= cena_sprzedazy < 45:
-        return 1.99
-    elif 45 <= cena_sprzedazy < 65:
-        return 3.99
-    elif 65 <= cena_sprzedazy < 100:
-        return 5.79
-    elif 100 <= cena_sprzedazy < 150:
-        return 9.09
-    elif cena_sprzedazy >= 150:
-        return 11.49
-    else:
-        return 0  # Dla kwot poniżej 30 zł dostawa darmowa
-
-def oblicz_dostawe_maksymalna(cena_sprzedazy):
-    if cena_sprzedazy <= 100:
-        return cena_sprzedazy * 0.0909
-    else:
-        return 0  # Dostawa maksymalna tylko dla kwot ≤ 100 zł
-
-def oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, marza_procent):
-    return (cena_zakupu + prowizja_z_dostawa) / (1 - marza_procent / 100)
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     form_marza = KalkulatorMarzyForm()
@@ -126,7 +22,8 @@ def index():
         else:
             prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
 
-        if kategoria == "G":  # Sklep internetowy
+        # Obsługa kategorii G (Sklep internetowy)
+        if kategoria == "G":
             koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy)
             maksymalny_koszt = prowizja_max + koszt_wysylki
             marza_darmowa_wysylka = cena_sprzedazy - cena_zakupu - maksymalny_koszt
@@ -143,7 +40,7 @@ def index():
                 f"</table>"
             )
         else:
-            # Obliczenia dostawy
+            # Obliczenia dostawy dla innych kategorii
             dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy)
             dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy)
 
@@ -233,7 +130,3 @@ def index():
         wynik_marza=session.get('wynik_marza'),
         wynik_vat=session.get('wynik_vat')
     )
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
