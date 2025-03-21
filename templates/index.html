@@ -80,8 +80,8 @@
                     {{ form_marza.inna_prowizja(size=20) }}
                     <br>
                 </div>
-                <label for="ilosc_sztuk">Ilość sztuk:</label>
-                {{ form_marza.ilosc_sztuk(size=20) }}
+                <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
+                {{ form_marza.ilosc_w_zestawie(size=20) }}
                 <br>
                 {{ form_marza.submit() }}
             </form>
@@ -107,8 +107,8 @@
                 <br>
                 <label for="kwota_dostawy">Lub wpisz kwotę dostawy:</label>
                 {{ form_vat.kwota_dostawy(size=20) }}
-                <label for="ilosc_sztuk">i ilość sztuk:</label>
-                {{ form_vat.ilosc_sztuk(size=20) }}
+                <label for="ilosc_w_dostawie">Ilość sztuk w dostawie:</label>
+                {{ form_vat.ilosc_w_dostawie(size=20) }}
                 <br>
                 {{ form_vat.submit() }}
             </form>
