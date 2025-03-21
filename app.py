@@ -74,27 +74,34 @@ def index():
     cena_sprzedazy_input = ""
     kategoria_input = ""
     inna_prowizja_input = ""
+    ilosc_sztuk_input = "1"  # Domyślna wartość dla ilości sztuk
 
     # Dane dla drugiego kalkulatora
     wynik_vat = None
     cena_netto_input = ""
     vat_input = "23"
-    koszt_dostawy_sztuka_input = ""
-    kwota_dostawy_input = ""
-    ilosc_sztuk_input = ""
+    koszt_dostawy_sztuka_input = "0"
+    kwota_dostawy_input = "0"
+    ilosc_sztuk_vat_input = "1"
 
     if request.method == "POST":
         if "cena_zakupu" in request.form:  # Pierwszy kalkulator
             cena_zakupu = zamien_przecinek_na_kropke(request.form["cena_zakupu"])
             cena_sprzedazy = zamien_przecinek_na_kropke(request.form["cena_sprzedazy"])
             kategoria = request.form["kategoria"]
-            inna_prowizja = request.form.get("inna_prowizja", None)  # Pobierz wartość procentu prowizji dla kategorii H
+            inna_prowizja = request.form.get("inna_prowizja", None)
+            ilosc_sztuk = zamien_przecinek_na_kropke(request.form.get("ilosc_sztuk", "1"))
 
             # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
             cena_zakupu_input = request.form["cena_zakupu"]
             cena_sprzedazy_input = request.form["cena_sprzedazy"]
             kategoria_input = kategoria
             inna_prowizja_input = inna_prowizja if inna_prowizja else ""
+            ilosc_sztuk_input = request.form.get("ilosc_sztuk", "1")
+
+            # Mnożenie cen przez ilość sztuk
+            cena_zakupu *= ilosc_sztuk
+            cena_sprzedazy *= ilosc_sztuk
 
             # Oblicz prowizje minimalną i maksymalną (bez promowania)
             if kategoria == "H" and inna_prowizja:
@@ -197,9 +204,9 @@ def index():
             # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
             cena_netto_input = request.form["cena_netto"]
             vat_input = request.form["vat"]
-            koszt_dostawy_sztuka_input = request.form.get("koszt_dostawy_sztuka", "")
-            kwota_dostawy_input = request.form.get("kwota_dostawy", "")
-            ilosc_sztuk_input = request.form.get("ilosc_sztuk", "")
+            koszt_dostawy_sztuka_input = request.form.get("koszt_dostawy_sztuka", "0")
+            kwota_dostawy_input = request.form.get("kwota_dostawy", "0")
+            ilosc_sztuk_vat_input = request.form.get("ilosc_sztuk", "1")
 
             # Oblicz koszt dostawy na sztukę
             if kwota_dostawy and ilosc_sztuk:
@@ -227,12 +234,13 @@ def index():
         cena_sprzedazy_input=cena_sprzedazy_input,
         kategoria_input=kategoria_input,
         inna_prowizja_input=inna_prowizja_input,
+        ilosc_sztuk_input=ilosc_sztuk_input,
         wynik_vat=wynik_vat,
         cena_netto_input=cena_netto_input,
         vat_input=vat_input,
         koszt_dostawy_sztuka_input=koszt_dostawy_sztuka_input,
         kwota_dostawy_input=kwota_dostawy_input,
-        ilosc_sztuk_input=ilosc_sztuk_input
+        ilosc_sztuk_vat_input=ilosc_sztuk_vat_input
     )
 
 if __name__ == "__main__":
