@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalkulator marży</title>
+    <title>Kalkulator marży i VAT</title>
     <style>
         .wynik {
             font-size: 16px; /* Zwiększona czcionka o 4 punkty */
@@ -31,6 +31,13 @@
         }
         .inna-prowizja {
             display: none; /* Domyślnie ukryte pole dla kategorii H */
+        }
+        .kalkulator-vat {
+            margin-top: 40px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
     </style>
     <script>
@@ -78,5 +85,35 @@
     <h2>Wynik:</h2>
     <div class="wynik">{{ wynik | safe }}</div>
     {% endif %}
+
+    <div class="kalkulator-vat">
+        <h1>Kalkulator VAT</h1>
+        <form method="POST">
+            <label for="cena_netto">Wpisz cenę netto:</label>
+            <input type="text" id="cena_netto" name="cena_netto" value="{{ cena_netto_input }}" required>
+            <br>
+            <label for="vat">Wybierz podatek VAT:</label>
+            <select id="vat" name="vat" required>
+                <option value="5" {% if vat_input == "5" %}selected{% endif %}>5%</option>
+                <option value="8" {% if vat_input == "8" %}selected{% endif %}>8%</option>
+                <option value="23" {% if vat_input == "23" %}selected{% endif %}>23%</option>
+            </select>
+            <br>
+            <label for="koszt_dostawy_sztuka">Wpisz koszt dostawy na sztukę:</label>
+            <input type="text" id="koszt_dostawy_sztuka" name="koszt_dostawy_sztuka" value="{{ koszt_dostawy_sztuka_input }}">
+            <br>
+            <label for="kwota_dostawy">Lub wpisz kwotę dostawy:</label>
+            <input type="text" id="kwota_dostawy" name="kwota_dostawy" value="{{ kwota_dostawy_input }}">
+            <label for="ilosc_sztuk">i ilość sztuk:</label>
+            <input type="text" id="ilosc_sztuk" name="ilosc_sztuk" value="{{ ilosc_sztuk_input }}">
+            <br>
+            <button type="submit">Oblicz</button>
+        </form>
+
+        {% if wynik_vat %}
+        <h2>Wynik:</h2>
+        <div class="wynik">{{ wynik_vat | safe }}</div>
+        {% endif %}
+    </div>
 </body>
 </html>

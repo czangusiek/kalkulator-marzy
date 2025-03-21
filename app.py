@@ -75,108 +75,150 @@ def index():
     kategoria_input = ""
     inna_prowizja_input = ""
 
+    # Dane dla drugiego kalkulatora
+    wynik_vat = None
+    cena_netto_input = ""
+    vat_input = "23"
+    koszt_dostawy_sztuka_input = ""
+    kwota_dostawy_input = ""
+    ilosc_sztuk_input = ""
+
     if request.method == "POST":
-        cena_zakupu = zamien_przecinek_na_kropke(request.form["cena_zakupu"])
-        cena_sprzedazy = zamien_przecinek_na_kropke(request.form["cena_sprzedazy"])
-        kategoria = request.form["kategoria"]
-        inna_prowizja = request.form.get("inna_prowizja", None)  # Pobierz wartość procentu prowizji dla kategorii H
+        if "cena_zakupu" in request.form:  # Pierwszy kalkulator
+            cena_zakupu = zamien_przecinek_na_kropke(request.form["cena_zakupu"])
+            cena_sprzedazy = zamien_przecinek_na_kropke(request.form["cena_sprzedazy"])
+            kategoria = request.form["kategoria"]
+            inna_prowizja = request.form.get("inna_prowizja", None)  # Pobierz wartość procentu prowizji dla kategorii H
 
-        # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
-        cena_zakupu_input = request.form["cena_zakupu"]
-        cena_sprzedazy_input = request.form["cena_sprzedazy"]
-        kategoria_input = kategoria
-        inna_prowizja_input = inna_prowizja if inna_prowizja else ""
+            # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
+            cena_zakupu_input = request.form["cena_zakupu"]
+            cena_sprzedazy_input = request.form["cena_sprzedazy"]
+            kategoria_input = kategoria
+            inna_prowizja_input = inna_prowizja if inna_prowizja else ""
 
-        # Oblicz prowizje minimalną i maksymalną (bez promowania)
-        if kategoria == "H" and inna_prowizja:
-            inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
-            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=inna_prowizja)
-        else:
-            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
-
-        if kategoria == "G":  # Sklep internetowy
-            koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy)
-            maksymalny_koszt = prowizja_max + koszt_wysylki
-            marza_darmowa_wysylka = cena_sprzedazy - cena_zakupu - maksymalny_koszt
-            marza_maksymalna = cena_sprzedazy - cena_zakupu - prowizja_max
-            sugerowana_cena = cena_zakupu / 0.84  # Sugerowana cena dla 15% marży
-
-            wynik = (
-                f"<h3>Wyniki dla kategorii G (Sklep internetowy)</h3>"
-                f"<table>"
-                f"<tr><th>Maksymalny koszt (przy darmowej wysyłce)</th><td><strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Marża przy darmowej wysyłce</th><td><strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Marża maksymalna</th><td><strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
-                f"</table>"
-            )
-        else:
-            # Oblicz koszty dostawy
-            dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy)
-            dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy)
-
-            # Oblicz prowizję z dostawą (bez promowania)
-            prowizja_z_dostawa_min = prowizja_min + dostawa_minimalna
-            prowizja_z_dostawa_max = prowizja_max + dostawa_maksymalna
-
-            # Wybierz najwyższą prowizję z dostawą
-            if cena_sprzedazy <= 100:
-                prowizja_z_dostawa = prowizja_z_dostawa_max  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
-            else:
-                prowizja_z_dostawa = prowizja_z_dostawa_min  # Dla kwot > 100 zł używamy dostawy minimalnej
-
-            # Oblicz sugerowane ceny sprzedaży (bez promowania)
-            sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa + 2  # Minimalna cena (marża 2 zł)
-            sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, 15)  # Marża 15%
-
-            # Wyniki bez promowania
-            wynik_bez_promowania = (
-                f"<h3>Bez promowania</h3>"
-                f"<table>"
-                f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15:.2f}</strong> zł</td></tr>"
-                f"</table>"
-            )
-
-            # Oblicz prowizje minimalną i maksymalną (z promowaniem)
+            # Oblicz prowizje minimalną i maksymalną (bez promowania)
             if kategoria == "H" and inna_prowizja:
-                prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
+                inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
+                prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=inna_prowizja)
             else:
-                prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True)
+                prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
 
-            # Oblicz prowizję z dostawą (z promowaniem)
-            prowizja_z_dostawa_min_promo = prowizja_min_promo + dostawa_minimalna
-            prowizja_z_dostawa_max_promo = prowizja_max_promo + dostawa_maksymalna
+            if kategoria == "G":  # Sklep internetowy
+                koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy)
+                maksymalny_koszt = prowizja_max + koszt_wysylki
+                marza_darmowa_wysylka = cena_sprzedazy - cena_zakupu - maksymalny_koszt
+                marza_maksymalna = cena_sprzedazy - cena_zakupu - prowizja_max
+                sugerowana_cena = cena_zakupu / 0.84  # Sugerowana cena dla 15% marży
 
-            # Wybierz najwyższą prowizję z dostawą (z promowaniem)
-            if cena_sprzedazy <= 100:
-                prowizja_z_dostawa_promo = prowizja_z_dostawa_max_promo  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
+                wynik = (
+                    f"<h3>Wyniki dla kategorii G (Sklep internetowy)</h3>"
+                    f"<table>"
+                    f"<tr><th>Maksymalny koszt (przy darmowej wysyłce)</th><td><strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Marża przy darmowej wysyłce</th><td><strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Marża maksymalna</th><td><strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
+                    f"</table>"
+                )
             else:
-                prowizja_z_dostawa_promo = prowizja_z_dostawa_min_promo  # Dla kwot > 100 zł używamy dostawy minimalnej
+                # Oblicz koszty dostawy
+                dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy)
+                dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy)
 
-            # Oblicz sugerowane ceny sprzedaży (z promowaniem)
-            sugerowana_cena_min_promo = cena_zakupu + prowizja_z_dostawa_promo + 2  # Minimalna cena (marża 2 zł)
-            sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_promo, 15)  # Marża 15%
+                # Oblicz prowizję z dostawą (bez promowania)
+                prowizja_z_dostawa_min = prowizja_min + dostawa_minimalna
+                prowizja_z_dostawa_max = prowizja_max + dostawa_maksymalna
 
-            # Wyniki z promowaniem
-            wynik_z_promowaniem = (
-                f"<h3>Promowanie</h3>"
+                # Wybierz najwyższą prowizję z dostawą
+                if cena_sprzedazy <= 100:
+                    prowizja_z_dostawa = prowizja_z_dostawa_max  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
+                else:
+                    prowizja_z_dostawa = prowizja_z_dostawa_min  # Dla kwot > 100 zł używamy dostawy minimalnej
+
+                # Oblicz sugerowane ceny sprzedaży (bez promowania)
+                sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa + 2  # Minimalna cena (marża 2 zł)
+                sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, 15)  # Marża 15%
+
+                # Wyniki bez promowania
+                wynik_bez_promowania = (
+                    f"<h3>Bez promowania</h3>"
+                    f"<table>"
+                    f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15:.2f}</strong> zł</td></tr>"
+                    f"</table>"
+                )
+
+                # Oblicz prowizje minimalną i maksymalną (z promowaniem)
+                if kategoria == "H" and inna_prowizja:
+                    prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
+                else:
+                    prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True)
+
+                # Oblicz prowizję z dostawą (z promowaniem)
+                prowizja_z_dostawa_min_promo = prowizja_min_promo + dostawa_minimalna
+                prowizja_z_dostawa_max_promo = prowizja_max_promo + dostawa_maksymalna
+
+                # Wybierz najwyższą prowizję z dostawą (z promowaniem)
+                if cena_sprzedazy <= 100:
+                    prowizja_z_dostawa_promo = prowizja_z_dostawa_max_promo  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
+                else:
+                    prowizja_z_dostawa_promo = prowizja_z_dostawa_min_promo  # Dla kwot > 100 zł używamy dostawy minimalnej
+
+                # Oblicz sugerowane ceny sprzedaży (z promowaniem)
+                sugerowana_cena_min_promo = cena_zakupu + prowizja_z_dostawa_promo + 2  # Minimalna cena (marża 2 zł)
+                sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_promo, 15)  # Marża 15%
+
+                # Wyniki z promowaniem
+                wynik_z_promowaniem = (
+                    f"<h3>Promowanie</h3>"
+                    f"<table>"
+                    f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min_promo:.2f}</strong> zł</td></tr>"
+                    f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15_promo:.2f}</strong> zł</td></tr>"
+                    f"</table>"
+                )
+
+                # Połącz wyniki
+                wynik = f"{wynik_bez_promowania}<hr>{wynik_z_promowaniem}"
+
+        elif "cena_netto" in request.form:  # Drugi kalkulator
+            cena_netto = zamien_przecinek_na_kropke(request.form["cena_netto"])
+            vat = zamien_przecinek_na_kropke(request.form["vat"])
+            koszt_dostawy_sztuka = zamien_przecinek_na_kropke(request.form.get("koszt_dostawy_sztuka", "0"))
+            kwota_dostawy = zamien_przecinek_na_kropke(request.form.get("kwota_dostawy", "0"))
+            ilosc_sztuk = zamien_przecinek_na_kropke(request.form.get("ilosc_sztuk", "1"))
+
+            # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
+            cena_netto_input = request.form["cena_netto"]
+            vat_input = request.form["vat"]
+            koszt_dostawy_sztuka_input = request.form.get("koszt_dostawy_sztuka", "")
+            kwota_dostawy_input = request.form.get("kwota_dostawy", "")
+            ilosc_sztuk_input = request.form.get("ilosc_sztuk", "")
+
+            # Oblicz koszt dostawy na sztukę
+            if kwota_dostawy and ilosc_sztuk:
+                koszt_dostawy_sztuka = kwota_dostawy / ilosc_sztuk
+
+            # Oblicz cenę brutto
+            cena_brutto = cena_netto * (1 + vat / 100)
+
+            # Oblicz cenę brutto z dostawą
+            cena_brutto_z_dostawa = cena_brutto + koszt_dostawy_sztuka
+
+            # Wyniki dla drugiego kalkulatora
+            wynik_vat = (
+                f"<h3>Wyniki kalkulatora VAT</h3>"
                 f"<table>"
-                f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min_promo:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Cena brutto</th><td><strong>{cena_brutto:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Cena brutto z dostawą</th><td><strong>{cena_brutto_z_dostawa:.2f}</strong> zł</td></tr>"
                 f"</table>"
             )
-
-            # Połącz wyniki
-            wynik = f"{wynik_bez_promowania}<hr>{wynik_z_promowaniem}"
 
     return render_template(
         "index.html",
@@ -184,7 +226,13 @@ def index():
         cena_zakupu_input=cena_zakupu_input,
         cena_sprzedazy_input=cena_sprzedazy_input,
         kategoria_input=kategoria_input,
-        inna_prowizja_input=inna_prowizja_input
+        inna_prowizja_input=inna_prowizja_input,
+        wynik_vat=wynik_vat,
+        cena_netto_input=cena_netto_input,
+        vat_input=vat_input,
+        koszt_dostawy_sztuka_input=koszt_dostawy_sztuka_input,
+        kwota_dostawy_input=kwota_dostawy_input,
+        ilosc_sztuk_input=ilosc_sztuk_input
     )
 
 if __name__ == "__main__":
