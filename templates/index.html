@@ -19,11 +19,25 @@
             border: 1px dashed #ccc; /* Linia przerywana */
             margin: 20px 0; /* Odstęp przed i po linii */
         }
+        .inna-prowizja {
+            display: none; /* Domyślnie ukryte pole dla kategorii H */
+        }
     </style>
+    <script>
+        function toggleInnaProwizja() {
+            const kategoria = document.getElementById("kategoria").value;
+            const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
+            if (kategoria === "H") {
+                innaProwizjaDiv.style.display = "block";
+            } else {
+                innaProwizjaDiv.style.display = "none";
+            }
+        }
+    </script>
 </head>
 <body>
     <h1>Kalkulator marży</h1>
-    <form method="POST">
+    <form method="POST" onsubmit="toggleInnaProwizja()">
         <label for="cena_zakupu">Cena zakupu:</label>
         <input type="text" id="cena_zakupu" name="cena_zakupu" value="{{ cena_zakupu_input }}" required>
         <br>
@@ -31,7 +45,7 @@
         <input type="text" id="cena_sprzedazy" name="cena_sprzedazy" value="{{ cena_sprzedazy_input }}" required>
         <br>
         <label for="kategoria">Kategoria:</label>
-        <select id="kategoria" name="kategoria" required>
+        <select id="kategoria" name="kategoria" required onchange="toggleInnaProwizja()">
             <option value="A" {% if kategoria_input == "A" %}selected{% endif %}>Supermarket (6,15%)</option>
             <option value="B" {% if kategoria_input == "B" %}selected{% endif %}>Cukier (12,92%)</option>
             <option value="C" {% if kategoria_input == "C" %}selected{% endif %}>Chemia gospodarcza (12,92%)</option>
@@ -39,8 +53,14 @@
             <option value="E" {% if kategoria_input == "E" %}selected{% endif %}>Elektronika (5,55%)</option>
             <option value="F" {% if kategoria_input == "F" %}selected{% endif %}>Chemia do 60 zł (18,45% / 9,84%)</option>
             <option value="G" {% if kategoria_input == "G" %}selected{% endif %}>Sklep internetowy</option>
+            <option value="H" {% if kategoria_input == "H" %}selected{% endif %}>Inna prowizja</option>
         </select>
         <br>
+        <div id="inna-prowizja-div" class="inna-prowizja">
+            <label for="inna_prowizja">Procent prowizji:</label>
+            <input type="text" id="inna_prowizja" name="inna_prowizja" value="{{ inna_prowizja_input }}">
+            <br>
+        </div>
         <button type="submit">Oblicz</button>
     </form>
 

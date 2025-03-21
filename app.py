@@ -6,7 +6,7 @@ app = Flask(__name__)
 def zamien_przecinek_na_kropke(liczba):
     return float(liczba.replace(",", "."))
 
-def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False):
+def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None):
     if kategoria == "A":  # Supermarket
         prowizja = cena_sprzedazy * 0.0615
     elif kategoria == "B":  # Cukier
@@ -24,6 +24,11 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False):
             prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
     elif kategoria == "G":  # Sklep internetowy
         prowizja = cena_sprzedazy * 0.01  # Prowizja 1%
+    elif kategoria == "H":  # Inna prowizja
+        if inna_prowizja is not None:
+            prowizja = cena_sprzedazy * (inna_prowizja / 100)
+        else:
+            prowizja = 0  # Domyślnie brak prowizji
     else:
         prowizja = 0  # Domyślnie brak prowizji
 
@@ -68,19 +73,26 @@ def index():
     cena_zakupu_input = ""
     cena_sprzedazy_input = ""
     kategoria_input = ""
+    inna_prowizja_input = ""
 
     if request.method == "POST":
         cena_zakupu = zamien_przecinek_na_kropke(request.form["cena_zakupu"])
         cena_sprzedazy = zamien_przecinek_na_kropke(request.form["cena_sprzedazy"])
         kategoria = request.form["kategoria"]
+        inna_prowizja = request.form.get("inna_prowizja", None)  # Pobierz wartość procentu prowizji dla kategorii H
 
         # Zapisz wprowadzone dane, aby przekazać je z powrotem do formularza
         cena_zakupu_input = request.form["cena_zakupu"]
         cena_sprzedazy_input = request.form["cena_sprzedazy"]
         kategoria_input = kategoria
+        inna_prowizja_input = inna_prowizja if inna_prowizja else ""
 
         # Oblicz prowizje minimalną i maksymalną (bez promowania)
-        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
+        if kategoria == "H" and inna_prowizja:
+            inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
+            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=inna_prowizja)
+        else:
+            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
 
         if kategoria == "G":  # Sklep internetowy
             koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy)
@@ -126,7 +138,10 @@ def index():
             )
 
             # Oblicz prowizje minimalną i maksymalną (z promowaniem)
-            prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True)
+            if kategoria == "H" and inna_prowizja:
+                prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
+            else:
+                prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True)
 
             # Oblicz prowizję z dostawą (z promowaniem)
             prowizja_z_dostawa_min_promo = prowizja_min_promo + dostawa_minimalna
@@ -161,7 +176,8 @@ def index():
         wynik=wynik,
         cena_zakupu_input=cena_zakupu_input,
         cena_sprzedazy_input=cena_sprzedazy_input,
-        kategoria_input=kategoria_input
+        kategoria_input=kategoria_input,
+        inna_prowizja_input=inna_prowizja_input
     )
 
 if __name__ == "__main__":
