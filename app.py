@@ -102,10 +102,13 @@ def index():
             sugerowana_cena = cena_zakupu / 0.84  # Sugerowana cena dla 15% marży
 
             wynik = (
-                f"<div>Maksymalny koszt (przy darmowej wysyłce): <strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł</div><br>"
-                f"<div>Marża przy darmowej wysyłce: <strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł</div><br>"
-                f"<div>Marża maksymalna: <strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł</div><br>"
-                f"<div>Sugerowana cena sprzedaży na sklepie: <strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</div>"
+                f"<h3>Wyniki dla kategorii G (Sklep internetowy)</h3>"
+                f"<table>"
+                f"<tr><th>Maksymalny koszt (przy darmowej wysyłce)</th><td><strong style='color:red;'>{maksymalny_koszt:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Marża przy darmowej wysyłce</th><td><strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Marża maksymalna</th><td><strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
+                f"</table>"
             )
         else:
             # Oblicz koszty dostawy
@@ -129,12 +132,14 @@ def index():
             # Wyniki bez promowania
             wynik_bez_promowania = (
                 f"<h3>Bez promowania</h3>"
-                f"<div>Marża (dostawa minimalna): <strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min:.2f}</strong> zł</div><br>"
-                f"<div>Marża (dostawa maksymalna): <strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max:.2f}</strong> zł</div><br>"
-                f"<div>Prowizja z dostawą minimalną: <strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł</div><br>"
-                f"<div>Prowizja z dostawą maksymalną: <strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł</div><br>"
-                f"<div>Minimalna sugerowana cena sprzedaży (marża 2 zł): <strong style='color:blue;'>{sugerowana_cena_min:.2f}</strong> zł</div><br>"
-                f"<div>Sugerowana cena sprzedaży (marża 15%): <strong style='color:blue;'>{sugerowana_cena_15:.2f}</strong> zł</div>"
+                f"<table>"
+                f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15:.2f}</strong> zł</td></tr>"
+                f"</table>"
             )
 
             # Oblicz prowizje minimalną i maksymalną (z promowaniem)
@@ -160,12 +165,14 @@ def index():
             # Wyniki z promowaniem
             wynik_z_promowaniem = (
                 f"<h3>Promowanie</h3>"
-                f"<div>Marża (dostawa minimalna): <strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min_promo:.2f}</strong> zł</div><br>"
-                f"<div>Marża (dostawa maksymalna): <strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max_promo:.2f}</strong> zł</div><br>"
-                f"<div>Prowizja z dostawą minimalną: <strong style='color:red;'>{prowizja_z_dostawa_min_promo:.2f}</strong> zł</div><br>"
-                f"<div>Prowizja z dostawą maksymalną: <strong style='color:red;'>{prowizja_z_dostawa_max_promo:.2f}</strong> zł</div><br>"
-                f"<div>Minimalna sugerowana cena sprzedaży (marża 2 zł): <strong style='color:blue;'>{sugerowana_cena_min_promo:.2f}</strong> zł</div><br>"
-                f"<div>Sugerowana cena sprzedaży (marża 15%): <strong style='color:blue;'>{sugerowana_cena_15_promo:.2f}</strong> zł</div>"
+                f"<table>"
+                f"<tr><th>Marża (dostawa minimalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Marża (dostawa maksymalna)</th><td><strong style='color:green;'>{cena_sprzedazy - cena_zakupu - prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja z dostawą minimalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_min_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja z dostawą maksymalną</th><td><strong style='color:red;'>{prowizja_z_dostawa_max_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Minimalna sugerowana cena sprzedaży (marża 2 zł)</th><td><strong style='color:blue;'>{sugerowana_cena_min_promo:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Sugerowana cena sprzedaży (marża 15%)</th><td><strong style='color:blue;'>{sugerowana_cena_15_promo:.2f}</strong> zł</td></tr>"
+                f"</table>"
             )
 
             # Połącz wyniki
