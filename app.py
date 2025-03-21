@@ -135,15 +135,13 @@ def index():
                 prowizja_z_dostawa_min = prowizja_min + dostawa_minimalna
                 prowizja_z_dostawa_max = prowizja_max + dostawa_maksymalna
 
-                # Wybierz najwyższą prowizję z dostawą
-                if cena_sprzedazy <= 100:
-                    prowizja_z_dostawa = prowizja_z_dostawa_max  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
-                else:
-                    prowizja_z_dostawa = prowizja_z_dostawa_min  # Dla kwot > 100 zł używamy dostawy minimalnej
+                # Dla kwot powyżej 100 zł prowizja i marża maksymalna są takie same jak minimalna
+                if cena_sprzedazy > 100:
+                    prowizja_z_dostawa_max = prowizja_z_dostawa_min
 
                 # Oblicz sugerowane ceny sprzedaży (bez promowania)
-                sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa + 2  # Minimalna cena (marża 2 zł)
-                sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, 15)  # Marża 15%
+                sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa_min + 2  # Minimalna cena (marża 2 zł)
+                sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min, 15)  # Marża 15%
 
                 # Wyniki bez promowania
                 wynik_bez_promowania = (
@@ -168,15 +166,13 @@ def index():
                 prowizja_z_dostawa_min_promo = prowizja_min_promo + dostawa_minimalna
                 prowizja_z_dostawa_max_promo = prowizja_max_promo + dostawa_maksymalna
 
-                # Wybierz najwyższą prowizję z dostawą (z promowaniem)
-                if cena_sprzedazy <= 100:
-                    prowizja_z_dostawa_promo = prowizja_z_dostawa_max_promo  # Dla kwot ≤ 100 zł używamy dostawy maksymalnej
-                else:
-                    prowizja_z_dostawa_promo = prowizja_z_dostawa_min_promo  # Dla kwot > 100 zł używamy dostawy minimalnej
+                # Dla kwot powyżej 100 zł prowizja i marża maksymalna są takie same jak minimalna
+                if cena_sprzedazy > 100:
+                    prowizja_z_dostawa_max_promo = prowizja_z_dostawa_min_promo
 
                 # Oblicz sugerowane ceny sprzedaży (z promowaniem)
-                sugerowana_cena_min_promo = cena_zakupu + prowizja_z_dostawa_promo + 2  # Minimalna cena (marża 2 zł)
-                sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_promo, 15)  # Marża 15%
+                sugerowana_cena_min_promo = cena_zakupu + prowizja_z_dostawa_min_promo + 2  # Minimalna cena (marża 2 zł)
+                sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min_promo, 15)  # Marża 15%
 
                 # Wyniki z promowaniem
                 wynik_z_promowaniem = (
@@ -221,10 +217,8 @@ def index():
             # Wyniki dla drugiego kalkulatora
             wynik_vat = (
                 f"<h3>Wyniki kalkulatora VAT</h3>"
-                f"<table>"
-                f"<tr><th>Cena brutto</th><td><strong>{cena_brutto:.2f}</strong> zł</td></tr>"
-                f"<tr><th>Cena brutto z dostawą</th><td><strong>{cena_brutto_z_dostawa:.2f}</strong> zł</td></tr>"
-                f"</table>"
+                f"<p><strong>Cena brutto:</strong> {cena_brutto:.2f} zł</p>"
+                f"<p><strong>Cena brutto z dostawą:</strong> {cena_brutto_z_dostawa:.2f} zł</p>"
             )
 
     return render_template(
