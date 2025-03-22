@@ -99,8 +99,15 @@ def oblicz_dostawe_maksymalna(cena_sprzedazy):
     else:
         return 0  # Dostawa maksymalna tylko dla kwot ≤ 100 zł
 
-def oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, marza_procent):
-    return (cena_zakupu + prowizja_z_dostawa) / (1 - marza_procent / 100)
+def oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa, marza_procent=None, marza_kwota=None):
+    if marza_kwota:
+        # Sugerowana cena dla marży kwotowej (np. 2 zł)
+        return cena_zakupu + prowizja_z_dostawa + marza_kwota
+    elif marza_procent:
+        # Sugerowana cena dla marży procentowej (np. 15%)
+        return (cena_zakupu + prowizja_z_dostawa) / (1 - marza_procent / 100)
+    else:
+        return 0  # Brak marży
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -156,8 +163,11 @@ def index():
             if cena_sprzedazy > 100:
                 prowizja_z_dostawa_max = prowizja_z_dostawa_min
 
-            sugerowana_cena_min = cena_zakupu + prowizja_z_dostawa_min + 2
-            sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min, 15)
+            # Sugerowana cena dla marży 2 zł
+            sugerowana_cena_min = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min, marza_kwota=2)
+
+            # Sugerowana cena dla marży 15%
+            sugerowana_cena_15 = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min, marza_procent=15)
 
             # Wyniki bez promowania
             wynik_bez_promowania = (
@@ -186,8 +196,11 @@ def index():
                 if cena_sprzedazy > 100:
                     prowizja_z_dostawa_max_promo = prowizja_z_dostawa_min_promo
 
-                sugerowana_cena_min_promo = cena_zakupu + prowizja_z_dostawa_min_promo + 2
-                sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min_promo, 15)
+                # Sugerowana cena dla marży 2 zł (z promowaniem)
+                sugerowana_cena_min_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min_promo, marza_kwota=2)
+
+                # Sugerowana cena dla marży 15% (z promowaniem)
+                sugerowana_cena_15_promo = oblicz_sugerowana_cene(cena_zakupu, prowizja_z_dostawa_min_promo, marza_procent=15)
 
                 # Wyniki z promowaniem
                 wynik_z_promowaniem = (
