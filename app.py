@@ -59,7 +59,7 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=N
         else:
             prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
     elif kategoria == "G":  # Sklep internetowy
-        prowizja = cena_sprzedazy * 0.01  # Prowizja 1%
+        prowizja = cena_sprzedazy * 0.01  # Prowizja 1% dla kategorii G
     elif kategoria == "H":  # Inna prowizja
         if inna_prowizja is not None:
             prowizja = cena_sprzedazy * (inna_prowizja / 100)
