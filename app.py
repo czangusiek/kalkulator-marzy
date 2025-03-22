@@ -181,6 +181,7 @@ def index():
                 f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
                 f"</table>"
             )
+            session['wynik_marza'] = wynik_marza  # Przypisz wyniki dla kategorii G
         else:
             # Obliczenia sugerowanej ceny (bez promowania)
             sugerowana_cena_min, opłaty_max_min = oblicz_sugerowana_cene(
