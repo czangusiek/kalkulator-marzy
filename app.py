@@ -175,7 +175,8 @@ def index():
             wynik_marza = (
                 f"<h3>Wyniki dla kategorii G (Sklep internetowy)</h3>"
                 f"<table>"
-                f"<tr><th>Prowizja z darmową wysyłką</th><td><strong style='color:red;'>{prowizja_max:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja (bez dostawy)</th><td><strong style='color:red;'>{prowizja_max:.2f}</strong> zł</td></tr>"
+                f"<tr><th>Prowizja z darmową wysyłką</th><td><strong style='color:red;'>{prowizja_max + koszt_wysylki:.2f}</strong> zł</td></tr>"
                 f"<tr><th>Marża przy darmowej wysyłce</th><td><strong style='color:green;'>{marza_darmowa_wysylka:.2f}</strong> zł</td></tr>"
                 f"<tr><th>Marża maksymalna</th><td><strong style='color:green;'>{marza_maksymalna:.2f}</strong> zł</td></tr>"
                 f"<tr><th>Sugerowana cena sprzedaży na sklepie</th><td><strong style='color:blue;'>{sugerowana_cena:.2f}</strong> zł</td></tr>"
