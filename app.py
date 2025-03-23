@@ -94,10 +94,12 @@ def oblicz_dostawe_minimalna(cena_sprzedazy):
         return 0  # Dla kwot poniżej 30 zł dostawa darmowa
 
 def oblicz_dostawe_maksymalna(cena_sprzedazy):
-    if cena_sprzedazy <= 100:
+    if cena_sprzedazy < 100:
         return cena_sprzedazy * 0.0909
+    elif 100 <= cena_sprzedazy < 120:
+        return 9.09
     else:
-        return 0  # Dostawa maksymalna tylko dla kwot ≤ 100 zł
+        return 11.49
 
 def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None):
     # Początkowa sugerowana cena (bez opłat)
