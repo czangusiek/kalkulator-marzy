@@ -96,7 +96,7 @@ def oblicz_dostawe_minimalna(cena_sprzedazy):
 def oblicz_dostawe_maksymalna(cena_sprzedazy):
     if cena_sprzedazy < 100:
         return cena_sprzedazy * 0.0909
-    elif 100 <= cena_sprzedazy < 120:
+    elif 100 <= cena_sprzedazy < 150:
         return 9.09
     else:
         return 11.49
