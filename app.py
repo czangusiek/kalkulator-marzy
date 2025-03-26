@@ -5,12 +5,14 @@ from wtforms import StringField, SelectField, SubmitField
 from wtforms.validators import DataRequired
 from flask import send_from_directory
 
+# Najpierw tworzymy instancję Flask przed wszystkimi dekoratorami @app.route
+app = Flask(__name__)
+app.secret_key = 'tajny_klucz'  # Wymagane przez Flask-WTF i sesję
+
+# Dopiero teraz możemy używać @app.route
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
-
-app = Flask(__name__)
-app.secret_key = 'tajny_klucz'  # Wymagane przez Flask-WTF i sesję
 
 # Formularz dla pierwszego kalkulatora (marża)
 class KalkulatorMarzyForm(FlaskForm):
