@@ -3,6 +3,11 @@ from flask import Flask, request, render_template, session, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField
 from wtforms.validators import DataRequired
+from flask import send_from_directory
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.ico')
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'  # Wymagane przez Flask-WTF i sesję
