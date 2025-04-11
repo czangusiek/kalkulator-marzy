@@ -1,18 +1,20 @@
 import os
-from flask import Flask, request, render_template, session, redirect, url_for
+from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField
 from wtforms.validators import DataRequired
-from flask import send_from_directory
 
-# Najpierw tworzymy instancję Flask przed wszystkimi dekoratorami @app.route
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'  # Wymagane przez Flask-WTF i sesję
 
-# Dopiero teraz możemy używać @app.route
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
+
+@app.route('/toggle_dark_mode', methods=['POST'])
+def toggle_dark_mode():
+    session['dark_mode'] = not session.get('dark_mode', False)
+    return jsonify({'status': 'success', 'dark_mode': session['dark_mode']})
 
 # Formularz dla pierwszego kalkulatora (marża)
 class KalkulatorMarzyForm(FlaskForm):
@@ -45,7 +47,6 @@ class KalkulatorVATForm(FlaskForm):
     ilosc_w_dostawie = StringField('Ilość sztuk w dostawie:', default="1", validators=[DataRequired()])
     submit = SubmitField('Oblicz')
 
-# Funkcje pomocnicze
 def zamien_przecinek_na_kropke(liczba):
     return float(liczba.replace(",", "."))
 
@@ -147,6 +148,10 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    # Inicjalizacja trybu ciemnego jeśli nie istnieje
+    if 'dark_mode' not in session:
+        session['dark_mode'] = False
+        
     form_marza = KalkulatorMarzyForm()
     form_vat = KalkulatorVATForm()
 
