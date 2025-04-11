@@ -14,6 +14,9 @@
             --container-bg: #f9f9f9;
             --container-border: #ccc;
             --hr-color: #ccc;
+            --red-color: #ff0000;
+            --green-color: #008000;
+            --blue-color: #0000ff;
         }
 
         .dark-mode {
@@ -24,12 +27,15 @@
             --container-bg: #1a1a1a;
             --container-border: #555;
             --hr-color: #555;
+            --red-color: #ff6b6b;
+            --green-color: #6bff6b;
+            --blue-color: #6b6bff;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: all 0.3s ease;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .wynik {
@@ -52,6 +58,15 @@
         }
         .wynik strong {
             font-weight: bold;
+        }
+        .wynik span[style*="color:red"] {
+            color: var(--red-color) !important;
+        }
+        .wynik span[style*="color:green"] {
+            color: var(--green-color) !important;
+        }
+        .wynik span[style*="color:blue"] {
+            color: var(--blue-color) !important;
         }
         hr {
             border: 1px dashed var(--hr-color);
@@ -77,6 +92,7 @@
             border: 1px solid var(--container-border);
             border-radius: 5px;
             background-color: var(--container-bg);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         /* Przycisk trybu ciemnego */
@@ -89,6 +105,20 @@
             font-size: 24px;
             cursor: pointer;
             z-index: 1000;
+            color: var(--text-color);
+        }
+
+        /* Style formularzy */
+        label {
+            color: var(--text-color);
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--table-border);
+            padding: 5px;
         }
 
         @media (max-width: 768px) {
@@ -118,18 +148,55 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-            }).then(response => {
-                if (response.ok) {
-                    document.body.classList.toggle('dark-mode');
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Przełącz klasę dark-mode na body
+                    document.body.classList.toggle('dark-mode', data.dark_mode);
+                    // Aktualizuj ikonę
+                    const iconButton = document.querySelector('.dark-mode-toggle');
+                    iconButton.textContent = data.dark_mode ? '🌞' : '🌓';
+                    
+                    // Aktualizuj zmienne CSS dla dynamicznych elementów
+                    updateColors(data.dark_mode);
                 }
-            });
+            })
+            .catch(error => console.error('Error:', error));
         }
 
-        // Sprawdź tryb przy ładowaniu strony
-        document.addEventListener('DOMContentLoaded', function() {
-            if ({{ 'true' if session.get('dark_mode') else 'false' }}) {
-                document.body.classList.add('dark-mode');
+        function updateColors(isDarkMode) {
+            const root = document.documentElement;
+            if (isDarkMode) {
+                root.style.setProperty('--bg-color', '#121212');
+                root.style.setProperty('--text-color', '#e0e0e0');
+                root.style.setProperty('--table-header-bg', '#1e1e1e');
+                root.style.setProperty('--table-border', '#444');
+                root.style.setProperty('--container-bg', '#1a1a1a');
+                root.style.setProperty('--container-border', '#555');
+                root.style.setProperty('--hr-color', '#555');
+                root.style.setProperty('--red-color', '#ff6b6b');
+                root.style.setProperty('--green-color', '#6bff6b');
+                root.style.setProperty('--blue-color', '#6b6bff');
+            } else {
+                root.style.setProperty('--bg-color', '#ffffff');
+                root.style.setProperty('--text-color', '#333333');
+                root.style.setProperty('--table-header-bg', '#f2f2f2');
+                root.style.setProperty('--table-border', '#ddd');
+                root.style.setProperty('--container-bg', '#f9f9f9');
+                root.style.setProperty('--container-border', '#ccc');
+                root.style.setProperty('--hr-color', '#ccc');
+                root.style.setProperty('--red-color', '#ff0000');
+                root.style.setProperty('--green-color', '#008000');
+                root.style.setProperty('--blue-color', '#0000ff');
             }
+        }
+
+        // Inicjalizacja przy ładowaniu strony
+        document.addEventListener('DOMContentLoaded', function() {
+            const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
+            document.body.classList.toggle('dark-mode', darkMode);
+            updateColors(darkMode);
         });
     </script>
 </head>
@@ -140,7 +207,6 @@
 
     <h1>Kalkulator marży i VAT</h1>
     <div class="container">
-        <!-- Reszta kodu pozostaje bez zmian -->
         <div class="kalkulator">
             <h2>Kalkulator marży</h2>
             <form method="POST" onsubmit="toggleInnaProwizja()">

@@ -14,6 +14,7 @@ def favicon():
 @app.route('/toggle_dark_mode', methods=['POST'])
 def toggle_dark_mode():
     session['dark_mode'] = not session.get('dark_mode', False)
+    session.modified = True  # Wymusza zapisanie sesji
     return jsonify({'status': 'success', 'dark_mode': session['dark_mode']})
 
 # Formularz dla pierwszego kalkulatora (marża)
