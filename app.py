@@ -8,7 +8,6 @@ app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
 app.config['SESSION_TYPE'] = 'filesystem'
 
-# Endpoint do przełączania trybu ciemnego
 @app.route('/toggle_dark_mode', methods=['POST'])
 def toggle_dark_mode():
     session['dark_mode'] = not session.get('dark_mode', False)
@@ -23,7 +22,6 @@ def toggle_dark_mode():
 def favicon():
     return send_from_directory('static', 'favicon.ico')
 
-# Formularz kalkulatora marży
 class KalkulatorMarzyForm(FlaskForm):
     cena_zakupu = StringField('Cena zakupu:', validators=[DataRequired()])
     cena_sprzedazy = StringField('Cena sprzedaży:', validators=[DataRequired()])
@@ -41,7 +39,6 @@ class KalkulatorMarzyForm(FlaskForm):
     ilosc_w_zestawie = StringField('Ilość w zestawie:', default="1", validators=[DataRequired()])
     submit = SubmitField('Oblicz')
 
-# Formularz kalkulatora VAT
 class KalkulatorVATForm(FlaskForm):
     cena_netto = StringField('Wpisz cenę netto:', validators=[DataRequired()])
     vat = SelectField('Wybierz podatek VAT:', choices=[
@@ -128,6 +125,11 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
+        
+        # Uwzględniamy zwiększoną prowizję dla promowania
+        if promowanie and kategoria != "G":
+            prowizja_max *= 1.75
+        
         opłaty_max = prowizja_max + dostawa_maksymalna
 
         if marza_kwota:
@@ -231,8 +233,8 @@ def index():
             </div>
             """
         else:
-            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, inna_prowizja=inna_prowizja)
-            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, inna_prowizja=inna_prowizja)
+            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja)
+            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja)
 
             wynik_bez_promowania = f"""
             <h3>Bez promowania</h3>
@@ -304,6 +306,8 @@ def index():
 
             if kategoria != "G":
                 prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
+                sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=True, inna_prowizja=inna_prowizja)
+                sugerowana_cena_15_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=True, inna_prowizja=inna_prowizja)
                 
                 wynik_z_promowaniem = f"""
                 <h3>Promowanie</h3>
@@ -353,9 +357,9 @@ def index():
                             <th>Minimalna sugerowana cena (marża 2 zł)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{sugerowana_cena_min:.2f}" 
+                                      data-value="{sugerowana_cena_min_promo:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_min:.2f} zł
+                                    {sugerowana_cena_min_promo:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -363,9 +367,9 @@ def index():
                             <th>Sugerowana cena (marża 15%)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{sugerowana_cena_15:.2f}" 
+                                      data-value="{sugerowana_cena_15_promo:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_15:.2f} zł
+                                    {sugerowana_cena_15_promo:.2f} zł
                                 </span>
                             </td>
                         </tr>
