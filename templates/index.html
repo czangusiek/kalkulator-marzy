@@ -150,6 +150,14 @@
         input[type="submit"]:hover {
             background-color: #45a049;
         }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .waluta-container {
+            display: none;
+            margin-top: 10px;
+        }
         h1, h2 {
             color: var(--text-color);
         }
@@ -217,6 +225,14 @@
                 <label for="ilosc_w_dostawie">Ilość sztuk w dostawie:</label>
                 {{ form_vat.ilosc_w_dostawie(size=20) }}
                 <br>
+                <label>
+                    {{ form_vat.inna_waluta(onchange="toggleWaluta()") }} Inna waluta niż PLN
+                </label>
+                <div id="waluta-container" class="waluta-container">
+                    <label for="kurs_waluty">Kurs waluty (1 waluta = X PLN):</label>
+                    {{ form_vat.kurs_waluty(size=20) }}
+                </div>
+                <br>
                 {{ form_vat.submit() }}
             </form>
 
@@ -235,6 +251,16 @@
                 innaProwizjaDiv.style.display = "block";
             } else {
                 innaProwizjaDiv.style.display = "none";
+            }
+        }
+
+        function toggleWaluta() {
+            const checkbox = document.querySelector('input[name="inna_waluta"]');
+            const container = document.getElementById("waluta-container");
+            if (checkbox.checked) {
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
             }
         }
 
@@ -314,6 +340,8 @@
             const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
             document.body.classList.toggle('dark-mode', darkMode);
             updateColors(darkMode);
+            toggleInnaProwizja();
+            toggleWaluta();
         });
     </script>
 </body>

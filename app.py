@@ -1,8 +1,8 @@
 import os
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SelectField, SubmitField, BooleanField
+from wtforms.validators import DataRequired, Optional
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
@@ -49,6 +49,8 @@ class KalkulatorVATForm(FlaskForm):
     koszt_dostawy_sztuka = StringField('Wpisz koszt dostawy na sztukę:', default="0")
     kwota_dostawy = StringField('Lub wpisz kwotę dostawy:', default="0")
     ilosc_w_dostawie = StringField('Ilość sztuk w dostawie:', default="1", validators=[DataRequired()])
+    inna_waluta = BooleanField('Inna waluta niż PLN', default=False)
+    kurs_waluty = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     submit = SubmitField('Oblicz')
 
 def zamien_przecinek_na_kropke(liczba):
@@ -381,6 +383,20 @@ def index():
         koszt_dostawy_sztuka = zamien_przecinek_na_kropke(form_vat.koszt_dostawy_sztuka.data)
         kwota_dostawy = zamien_przecinek_na_kropke(form_vat.kwota_dostawy.data)
         ilosc_w_dostawie = zamien_przecinek_na_kropke(form_vat.ilosc_w_dostawie.data)
+        
+        # Obsługa waluty
+        inna_waluta = form_vat.inna_waluta.data
+        kurs_waluty = 1.0
+        if inna_waluta:
+            kurs_waluty = zamien_przecinek_na_kropke(form_vat.kurs_waluty.data) if form_vat.kurs_waluty.data else 1.0
+        
+        # Przeliczanie na PLN jeśli wybrano inną walutę
+        if inna_waluta:
+            cena_netto *= kurs_waluty
+            if kwota_dostawy and ilosc_w_dostawie:
+                kwota_dostawy *= kurs_waluty
+            else:
+                koszt_dostawy_sztuka *= kurs_waluty
 
         if kwota_dostawy and ilosc_w_dostawie:
             koszt_dostawy_sztuka = kwota_dostawy / ilosc_w_dostawie
@@ -407,6 +423,24 @@ def index():
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_brutto_z_dostawa:.2f}" style="color:var(--blue-color);">
                             {cena_brutto_z_dostawa:.2f} zł
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Cena netto:</th>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{cena_netto:.2f}" style="color:var(--blue-color);">
+                            {cena_netto:.2f} zł
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Koszt dostawy na sztukę:</th>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">
+                            {koszt_dostawy_sztuka:.2f} zł
                         </span>
                     </td>
                 </tr>
