@@ -35,13 +35,16 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: all 0.3s ease;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .wynik {
             font-size: 16px;
             line-height: 1.6;
-            color: var(--text-color);
         }
         .wynik table {
             width: 100%;
@@ -58,15 +61,6 @@
         }
         .wynik strong {
             font-weight: bold;
-        }
-        .wynik span[style*="color:red"] {
-            color: var(--red-color) !important;
-        }
-        .wynik span[style*="color:green"] {
-            color: var(--green-color) !important;
-        }
-        .wynik span[style*="color:blue"] {
-            color: var(--blue-color) !important;
         }
         hr {
             border: 1px dashed var(--hr-color);
@@ -85,17 +79,18 @@
         .container {
             display: flex;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         .kalkulator {
-            width: 48%;
-            padding: 15px;
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
             border: 1px solid var(--container-border);
             border-radius: 5px;
             background-color: var(--container-bg);
-            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
-        /* Przycisk trybu ciemnego */
         .dark-mode-toggle {
             position: fixed;
             top: 20px;
@@ -108,97 +103,63 @@
             color: var(--text-color);
         }
 
-        /* Style formularzy */
+        .kwota-do-kopiowania {
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 2px 5px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .kwota-do-kopiowania:hover {
+            background-color: var(--table-header-bg);
+            box-shadow: 0 0 0 1px var(--table-border);
+        }
+        .kwota-do-kopiowania:active {
+            transform: scale(0.98);
+        }
+        .skopiowano-info {
+            color: var(--green-color);
+            font-size: 0.8em;
+            margin-left: 5px;
+            display: none;
+        }
+
         label {
-            color: var(--text-color);
             display: block;
             margin-top: 10px;
+            color: var(--text-color);
         }
         input, select {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
             background-color: var(--bg-color);
             color: var(--text-color);
             border: 1px solid var(--table-border);
-            padding: 5px;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        h1, h2 {
+            color: var(--text-color);
         }
 
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
             }
-            .kalkulator {
-                width: 100%;
-                margin-bottom: 20px;
-            }
         }
     </style>
-    <script>
-        function toggleInnaProwizja() {
-            const kategoria = document.getElementById("kategoria").value;
-            const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
-            if (kategoria === "H") {
-                innaProwizjaDiv.style.display = "block";
-            } else {
-                innaProwizjaDiv.style.display = "none";
-            }
-        }
-
-        function toggleDarkMode() {
-            fetch('/toggle_dark_mode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Przełącz klasę dark-mode na body
-                    document.body.classList.toggle('dark-mode', data.dark_mode);
-                    // Aktualizuj ikonę
-                    const iconButton = document.querySelector('.dark-mode-toggle');
-                    iconButton.textContent = data.dark_mode ? '🌞' : '🌓';
-                    
-                    // Aktualizuj zmienne CSS dla dynamicznych elementów
-                    updateColors(data.dark_mode);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-
-        function updateColors(isDarkMode) {
-            const root = document.documentElement;
-            if (isDarkMode) {
-                root.style.setProperty('--bg-color', '#121212');
-                root.style.setProperty('--text-color', '#e0e0e0');
-                root.style.setProperty('--table-header-bg', '#1e1e1e');
-                root.style.setProperty('--table-border', '#444');
-                root.style.setProperty('--container-bg', '#1a1a1a');
-                root.style.setProperty('--container-border', '#555');
-                root.style.setProperty('--hr-color', '#555');
-                root.style.setProperty('--red-color', '#ff6b6b');
-                root.style.setProperty('--green-color', '#6bff6b');
-                root.style.setProperty('--blue-color', '#6b6bff');
-            } else {
-                root.style.setProperty('--bg-color', '#ffffff');
-                root.style.setProperty('--text-color', '#333333');
-                root.style.setProperty('--table-header-bg', '#f2f2f2');
-                root.style.setProperty('--table-border', '#ddd');
-                root.style.setProperty('--container-bg', '#f9f9f9');
-                root.style.setProperty('--container-border', '#ccc');
-                root.style.setProperty('--hr-color', '#ccc');
-                root.style.setProperty('--red-color', '#ff0000');
-                root.style.setProperty('--green-color', '#008000');
-                root.style.setProperty('--blue-color', '#0000ff');
-            }
-        }
-
-        // Inicjalizacja przy ładowaniu strony
-        document.addEventListener('DOMContentLoaded', function() {
-            const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
-            document.body.classList.toggle('dark-mode', darkMode);
-            updateColors(darkMode);
-        });
-    </script>
 </head>
 <body>
     <button class="dark-mode-toggle" onclick="toggleDarkMode()">
@@ -252,6 +213,7 @@
                 <br>
                 <label for="kwota_dostawy">Lub wpisz kwotę dostawy:</label>
                 {{ form_vat.kwota_dostawy(size=20) }}
+                <br>
                 <label for="ilosc_w_dostawie">Ilość sztuk w dostawie:</label>
                 {{ form_vat.ilosc_w_dostawie(size=20) }}
                 <br>
@@ -264,5 +226,95 @@
             {% endif %}
         </div>
     </div>
+
+    <script>
+        function toggleInnaProwizja() {
+            const kategoria = document.getElementById("kategoria").value;
+            const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
+            if (kategoria === "H") {
+                innaProwizjaDiv.style.display = "block";
+            } else {
+                innaProwizjaDiv.style.display = "none";
+            }
+        }
+
+        function toggleDarkMode() {
+            fetch('/toggle_dark_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.body.classList.toggle('dark-mode', data.dark_mode);
+                    document.querySelector('.dark-mode-toggle').textContent = data.icon;
+                    updateColors(data.dark_mode);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function updateColors(isDarkMode) {
+            const colors = isDarkMode ? {
+                bg: '#121212', text: '#e0e0e0', tableHeader: '#1e1e1e',
+                tableBorder: '#444', containerBg: '#1a1a1a', containerBorder: '#555',
+                hr: '#555', red: '#ff6b6b', green: '#6bff6b', blue: '#6b6bff'
+            } : {
+                bg: '#ffffff', text: '#333333', tableHeader: '#f2f2f2',
+                tableBorder: '#ddd', containerBg: '#f9f9f9', containerBorder: '#ccc',
+                hr: '#ccc', red: '#ff0000', green: '#008000', blue: '#0000ff'
+            };
+
+            document.documentElement.style.setProperty('--bg-color', colors.bg);
+            document.documentElement.style.setProperty('--text-color', colors.text);
+            document.documentElement.style.setProperty('--table-header-bg', colors.tableHeader);
+            document.documentElement.style.setProperty('--table-border', colors.tableBorder);
+            document.documentElement.style.setProperty('--container-bg', colors.containerBg);
+            document.documentElement.style.setProperty('--container-border', colors.containerBorder);
+            document.documentElement.style.setProperty('--hr-color', colors.hr);
+            document.documentElement.style.setProperty('--red-color', colors.red);
+            document.documentElement.style.setProperty('--green-color', colors.green);
+            document.documentElement.style.setProperty('--blue-color', colors.blue);
+        }
+
+        function kopiujDoSchowka(element) {
+            const wartosc = element.getAttribute('data-value');
+            const potwierdzenie = document.createElement('span');
+            potwierdzenie.className = 'skopiowano-info';
+            potwierdzenie.textContent = '✓';
+            element.appendChild(potwierdzenie);
+            potwierdzenie.style.display = 'inline';
+            
+            setTimeout(() => {
+                potwierdzenie.style.display = 'none';
+            }, 2000);
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(wartosc).catch(() => {
+                    kopiujFallback(wartosc);
+                });
+            } else {
+                kopiujFallback(wartosc);
+            }
+        }
+
+        function kopiujFallback(wartosc) {
+            const textarea = document.createElement('textarea');
+            textarea.value = wartosc;
+            textarea.style.position = 'fixed';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
+            document.body.classList.toggle('dark-mode', darkMode);
+            updateColors(darkMode);
+        });
+    </script>
 </body>
 </html>
