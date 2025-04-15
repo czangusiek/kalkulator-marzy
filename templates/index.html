@@ -213,6 +213,9 @@
                 <label for="cena_netto">Wpisz cenę netto:</label>
                 {{ form_vat.cena_netto(size=20) }}
                 <br>
+                <label for="ilosc_sztuk">Ilość sztuk w cenie netto:</label>
+                {{ form_vat.ilosc_sztuk(size=20) }}
+                <br>
                 <label for="vat">Wybierz podatek VAT:</label>
                 {{ form_vat.vat() }}
                 <br>
@@ -226,11 +229,18 @@
                 {{ form_vat.ilosc_w_dostawie(size=20) }}
                 <br>
                 <label>
-                    {{ form_vat.inna_waluta(onchange="toggleWaluta()") }} Inna waluta niż PLN
+                    {{ form_vat.inna_waluta_towar(onchange="toggleWaluta('towar')") }} Inna waluta niż PLN (towar)
                 </label>
-                <div id="waluta-container" class="waluta-container">
-                    <label for="kurs_waluty">Kurs waluty (1 waluta = X PLN):</label>
-                    {{ form_vat.kurs_waluty(size=20) }}
+                <div id="waluta-container-towar" class="waluta-container">
+                    <label for="kurs_waluty_towar">Kurs waluty (1 waluta = X PLN):</label>
+                    {{ form_vat.kurs_waluty_towar(size=20) }}
+                </div>
+                <label>
+                    {{ form_vat.inna_waluta_dostawa(onchange="toggleWaluta('dostawa')") }} Inna waluta niż PLN (dostawa)
+                </label>
+                <div id="waluta-container-dostawa" class="waluta-container">
+                    <label for="kurs_waluty_dostawa">Kurs waluty (1 waluta = X PLN):</label>
+                    {{ form_vat.kurs_waluty_dostawa(size=20) }}
                 </div>
                 <br>
                 {{ form_vat.submit() }}
@@ -254,9 +264,9 @@
             }
         }
 
-        function toggleWaluta() {
-            const checkbox = document.querySelector('input[name="inna_waluta"]');
-            const container = document.getElementById("waluta-container");
+        function toggleWaluta(typ) {
+            const checkbox = document.querySelector(`input[name="inna_waluta_${typ}"]`);
+            const container = document.getElementById(`waluta-container-${typ}`);
             if (checkbox.checked) {
                 container.style.display = "block";
             } else {
@@ -341,7 +351,8 @@
             document.body.classList.toggle('dark-mode', darkMode);
             updateColors(darkMode);
             toggleInnaProwizja();
-            toggleWaluta();
+            toggleWaluta('towar');
+            toggleWaluta('dostawa');
         });
     </script>
 </body>
