@@ -114,21 +114,16 @@ def oblicz_dostawe_maksymalna(cena_sprzedazy):
         return 11.49
 
 def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None):
+    sugerowana_cena = cena_zakupu
     if marza_kwota:
-        sugerowana_cena = cena_zakupu + marza_kwota
+        sugerowana_cena += marza_kwota
     elif marza_procent:
-        sugerowana_cena = cena_zakupu / (1 - marza_procent / 100)
-    else:
-        sugerowana_cena = cena_zakupu
+        sugerowana_cena /= (1 - marza_procent / 100)
 
     for _ in range(10):
         prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
-        
-        # Uwzględniamy zwiększoną prowizję dla promowania
-        if promowanie and kategoria != "G":
-            prowizja_max *= 1.75
         
         opłaty_max = prowizja_max + dostawa_maksymalna
 
