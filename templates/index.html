@@ -69,6 +69,9 @@
         .inna-prowizja {
             display: none;
         }
+        .kategoria-podstawowa {
+            display: none;
+        }
         .kalkulator-vat {
             margin-top: 40px;
             padding: 20px;
@@ -194,6 +197,11 @@
                     {{ form_marza.inna_prowizja(size=20) }}
                     <br>
                 </div>
+                <div id="kategoria-podstawowa-div" class="kategoria-podstawowa">
+                    <label for="kategoria_podstawowa">Kategoria podstawowa:</label>
+                    {{ form_marza.kategoria_podstawaya(size=20) }}
+                    <br>
+                </div>
                 <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
                 <br>
@@ -257,10 +265,17 @@
         function toggleInnaProwizja() {
             const kategoria = document.getElementById("kategoria").value;
             const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
+            const kategoriaPodstawowaDiv = document.getElementById("kategoria-podstawowa-div");
+            
             if (kategoria === "H") {
                 innaProwizjaDiv.style.display = "block";
+                kategoriaPodstawowaDiv.style.display = "none";
+            } else if (kategoria === "I") {
+                innaProwizjaDiv.style.display = "none";
+                kategoriaPodstawowaDiv.style.display = "block";
             } else {
                 innaProwizjaDiv.style.display = "none";
+                kategoriaPodstawowaDiv.style.display = "none";
             }
         }
 

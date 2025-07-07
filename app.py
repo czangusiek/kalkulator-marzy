@@ -33,9 +33,19 @@ class KalkulatorMarzyForm(FlaskForm):
         ('E', 'Elektronika (5,55%)'),
         ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
         ('G', 'Sklep internetowy'),
-        ('H', 'Inna prowizja')
+        ('H', 'Inna prowizja'),
+        ('I', 'Strefa okazji (+60% prowizji podstawowej)')
     ], validators=[DataRequired()])
     inna_prowizja = StringField('Procent prowizji:')
+    kategoria_podstawowa = SelectField('Kategoria podstawowa:', choices=[
+        ('A', 'Supermarket (6,15%)'),
+        ('B', 'Cukier (12,92%)'),
+        ('C', 'Chemia gospodarcza (12,92%)'),
+        ('D', 'AGD zwykłe (13,53%)'),
+        ('E', 'Elektronika (5,55%)'),
+        ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
+        ('H', 'Inna prowizja')
+    ], validators=[Optional()])
     ilosc_w_zestawie = StringField('Ilość w zestawie:', default="1", validators=[DataRequired()])
     submit = SubmitField('Oblicz')
 
@@ -59,7 +69,7 @@ class KalkulatorVATForm(FlaskForm):
 def zamien_przecinek_na_kropke(liczba):
     return float(liczba.replace(",", "."))
 
-def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None):
+def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     if kategoria == "A":
         prowizja = cena_sprzedazy * 0.0615
     elif kategoria == "B":
@@ -82,10 +92,37 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=N
             prowizja = cena_sprzedazy * (inna_prowizja / 100)
         else:
             prowizja = 0
+    elif kategoria == "I":
+        # Oblicz prowizję podstawową na podstawie wybranej kategorii
+        if kategoria_podstawowa == "A":
+            prowizja_podstawowa = cena_sprzedazy * 0.0615
+        elif kategoria_podstawowa == "B":
+            prowizja_podstawowa = cena_sprzedazy * 0.1292
+        elif kategoria_podstawowa == "C":
+            prowizja_podstawowa = cena_sprzedazy * 0.1292
+        elif kategoria_podstawowa == "D":
+            prowizja_podstawowa = cena_sprzedazy * 0.1353
+        elif kategoria_podstawowa == "E":
+            prowizja_podstawowa = cena_sprzedazy * 0.0555
+        elif kategoria_podstawowa == "F":
+            if cena_sprzedazy <= 60:
+                prowizja_podstawowa = cena_sprzedazy * 0.1845
+            else:
+                prowizja_podstawowa = 11.07 + (cena_sprzedazy - 60) * 0.0984
+        elif kategoria_podstawowa == "H":
+            if inna_prowizja is not None:
+                prowizja_podstawowa = cena_sprzedazy * (inna_prowizja / 100)
+            else:
+                prowizja_podstawowa = 0
+        else:
+            prowizja_podstawowa = 0
+        
+        # Dodaj 60% do prowizji podstawowej
+        prowizja = prowizja_podstawowa * 1.6
     else:
         prowizja = 0
 
-    if promowanie and kategoria != "G":
+    if promowanie and kategoria not in ["G", "I"]:
         prowizja *= 1.75
 
     return prowizja, prowizja
@@ -118,7 +155,7 @@ def oblicz_dostawe_maksymalna(cena_sprzedazy):
     else:
         return 11.49
 
-def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None):
+def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     sugerowana_cena = cena_zakupu
     if marza_kwota:
         sugerowana_cena += marza_kwota
@@ -126,7 +163,7 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         sugerowana_cena /= (1 - marza_procent / 100)
 
     for _ in range(10):
-        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja)
+        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawowa)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
         
@@ -159,6 +196,7 @@ def index():
         cena_sprzedazy = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
         kategoria = form_marza.kategoria.data
         inna_prowizja = form_marza.inna_prowizja.data
+        kategoria_podstawowa = form_marza.kategoria_podstawowa.data if kategoria == "I" else None
         ilosc_w_zestawie = zamien_przecinek_na_kropke(form_marza.ilosc_w_zestawie.data)
 
         cena_zakupu *= ilosc_w_zestawie
@@ -167,6 +205,8 @@ def index():
         if kategoria == "H" and inna_prowizja:
             inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
             prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=inna_prowizja)
+        elif kategoria == "I":
+            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, kategoria_podstawowa=kategoria_podstawowa)
         else:
             prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
 
@@ -233,8 +273,8 @@ def index():
             </div>
             """
         else:
-            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja)
-            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja)
+            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
 
             wynik_bez_promowania = f"""
             <h3>Bez promowania</h3>
@@ -304,7 +344,7 @@ def index():
             </div>
             """
 
-            if kategoria != "G":
+            if kategoria not in ["G", "I"]:
                 prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
                 sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=True, inna_prowizja=inna_prowizja)
                 sugerowana_cena_15_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=True, inna_prowizja=inna_prowizja)
@@ -327,9 +367,9 @@ def index():
                             <th>Marża (dostawa maksymalna)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f}" 
+                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_minimalna:.2f}" 
                                       style="color:var(--green-color);">
-                                    {cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f} zł
+                                    {cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_minimalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
