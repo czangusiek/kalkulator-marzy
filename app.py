@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField
+from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, DateField
 from wtforms.validators import DataRequired, Optional, NumberRange
 from datetime import datetime
 import requests
@@ -91,7 +91,7 @@ class KalkulatorVATForm(FlaskForm):
         ('historyczny', 'Kurs z dnia'),
         ('wlasny', 'Własny kurs')
     ], default='aktualny')
-    data_kursu_towar = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
+    data_kursu_towar = DateField('Data kursu:', format='%Y-%m-%d', default=datetime.now)
     waluta_towar = SelectField('Waluta:', choices=[
         ('USD', 'USD (dolar amerykański)'),
         ('EUR', 'EUR (euro)'),
@@ -104,7 +104,7 @@ class KalkulatorVATForm(FlaskForm):
         ('historyczny', 'Kurs z dnia'),
         ('wlasny', 'Własny kurs')
     ], default='aktualny')
-    data_kursu_dostawa = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
+    data_kursu_dostawa = DateField('Data kursu:', format='%Y-%m-%d', default=datetime.now)
     waluta_dostawa = SelectField('Waluta:', choices=[
         ('USD', 'USD (dolar amerykański)'),
         ('EUR', 'EUR (euro)'),
@@ -480,10 +480,10 @@ def index():
                 kurs_waluty_towar = zamien_przecinek_na_kropke(form_vat.kurs_waluty_towar.data) if form_vat.kurs_waluty_towar.data else 1.0
                 kurs_info_towar = f"Użyto własnego kursu: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             else:
-                data_kursu = form_vat.data_kursu_towar.data if form_vat.typ_kursu_towar.data == 'historyczny' else None
+                data_kursu = form_vat.data_kursu_towar.data.strftime('%Y-%m-%d') if form_vat.typ_kursu_towar.data == 'historyczny' else None
                 kurs_waluty_towar = pobierz_kurs_waluty(form_vat.waluta_towar.data, data_kursu) or 1.0
                 if form_vat.typ_kursu_towar.data == 'historyczny':
-                    kurs_info_towar = f"Kurs {form_vat.waluta_towar.data} z dnia {form_vat.data_kursu_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
+                    kurs_info_towar = f"Kurs {form_vat.waluta_towar.data} z dnia {form_vat.data_kursu_towar.data.strftime('%Y-%m-%d')}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
                 else:
                     kurs_info_towar = f"Aktualny kurs {form_vat.waluta_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             cena_netto *= kurs_waluty_towar
@@ -495,10 +495,10 @@ def index():
                 kurs_waluty_dostawa = zamien_przecinek_na_kropke(form_vat.kurs_waluty_dostawa.data) if form_vat.kurs_waluty_dostawa.data else 1.0
                 kurs_info_dostawa = f"Użyto własnego kursu: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             else:
-                data_kursu = form_vat.data_kursu_dostawa.data if form_vat.typ_kursu_dostawa.data == 'historyczny' else None
+                data_kursu = form_vat.data_kursu_dostawa.data.strftime('%Y-%m-%d') if form_vat.typ_kursu_dostawa.data == 'historyczny' else None
                 kurs_waluty_dostawa = pobierz_kurs_waluty(form_vat.waluta_dostawa.data, data_kursu) or 1.0
                 if form_vat.typ_kursu_dostawa.data == 'historyczny':
-                    kurs_info_dostawa = f"Kurs {form_vat.waluta_dostawa.data} z dnia {form_vat.data_kursu_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
+                    kurs_info_dostawa = f"Kurs {form_vat.waluta_dostawa.data} z dnia {form_vat.data_kursu_dostawa.data.strftime('%Y-%m-%d')}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
                 else:
                     kurs_info_dostawa = f"Aktualny kurs {form_vat.waluta_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             

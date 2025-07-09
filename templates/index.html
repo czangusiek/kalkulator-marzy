@@ -193,6 +193,23 @@
             color: var(--text-color);
         }
 
+        /* Styl dla inputów typu date */
+        input[type="date"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+        }
+
+        /* Ukrycie domyślnej ikony kalendarza w niektórych przeglądarkach */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(var(--dark-mode-invert, 0));
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -280,7 +297,8 @@
                         <label for="waluta_towar">Waluta:</label>
                         {{ form_vat.waluta_towar(id="waluta_towar_historyczny_select") }}
                         <label for="data_kursu_towar">Data kursu:</label>
-                        {{ form_vat.data_kursu_towar() }}
+                        <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
+                               value="{{ form_vat.data_kursu_towar.data.strftime('%Y-%m-%d') if form_vat.data_kursu_towar.data else '' }}">
                     </div>
                     
                     <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
@@ -304,7 +322,8 @@
                         <label for="waluta_dostawa">Waluta:</label>
                         {{ form_vat.waluta_dostawa(id="waluta_dostawa_historyczny_select") }}
                         <label for="data_kursu_dostawa">Data kursu:</label>
-                        {{ form_vat.data_kursu_dostawa() }}
+                        <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
+                               value="{{ form_vat.data_kursu_dostawa.data.strftime('%Y-%m-%d') if form_vat.data_kursu_dostawa.data else '' }}">
                     </div>
                     
                     <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
@@ -441,6 +460,9 @@
             document.documentElement.style.setProperty('--red-color', colors.red);
             document.documentElement.style.setProperty('--green-color', colors.green);
             document.documentElement.style.setProperty('--blue-color', colors.blue);
+            
+            // Ustawienie zmiennej CSS dla ikony kalendarza
+            document.documentElement.style.setProperty('--dark-mode-invert', isDarkMode ? '1' : '0');
         }
 
         function kopiujDoSchowka(element) {
