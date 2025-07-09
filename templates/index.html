@@ -273,12 +273,12 @@
                     
                     <div id="waluta-towar-aktualny" class="waluta-typ">
                         <label for="waluta_towar">Waluta:</label>
-                        {{ form_vat.waluta_towar() }}
+                        {{ form_vat.waluta_towar(id="waluta_towar_select") }}
                     </div>
                     
                     <div id="waluta-towar-historyczny" class="waluta-typ" style="display:none;">
                         <label for="waluta_towar">Waluta:</label>
-                        {{ form_vat.waluta_towar() }}
+                        {{ form_vat.waluta_towar(id="waluta_towar_historyczny_select") }}
                         <label for="data_kursu_towar">Data kursu:</label>
                         {{ form_vat.data_kursu_towar() }}
                     </div>
@@ -297,12 +297,12 @@
                     
                     <div id="waluta-dostawa-aktualny" class="waluta-typ">
                         <label for="waluta_dostawa">Waluta:</label>
-                        {{ form_vat.waluta_dostawa() }}
+                        {{ form_vat.waluta_dostawa(id="waluta_dostawa_select") }}
                     </div>
                     
                     <div id="waluta-dostawa-historyczny" class="waluta-typ" style="display:none;">
                         <label for="waluta_dostawa">Waluta:</label>
-                        {{ form_vat.waluta_dostawa() }}
+                        {{ form_vat.waluta_dostawa(id="waluta_dostawa_historyczny_select") }}
                         <label for="data_kursu_dostawa">Data kursu:</label>
                         {{ form_vat.data_kursu_dostawa() }}
                     </div>
@@ -324,6 +324,10 @@
     </div>
 
     <script>
+        // Zmienne do przechowywania stanu walut
+        let lastWalutaTowar = null;
+        let lastWalutaDostawa = null;
+
         function toggleInnaProwizja() {
             const kategoria = document.getElementById("kategoria").value;
             const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
@@ -347,6 +351,17 @@
             if (checkbox.checked) {
                 container.style.display = "block";
                 toggleTypKursu(typ);
+                
+                // Przywróć ostatnio wybraną walutę jeśli istnieje
+                if (typ === 'towar' && lastWalutaTowar) {
+                    document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
+                        select.value = lastWalutaTowar;
+                    });
+                } else if (typ === 'dostawa' && lastWalutaDostawa) {
+                    document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
+                        select.value = lastWalutaDostawa;
+                    });
+                }
             } else {
                 container.style.display = "none";
             }
@@ -367,6 +382,23 @@
                 document.getElementById(`waluta-${typ}-historyczny`).style.display = "block";
             } else if (typKursu === "wlasny") {
                 document.getElementById(`waluta-${typ}-wlasny`).style.display = "block";
+            }
+        }
+
+        function synchronizujWaluty(typ) {
+            const selects = document.querySelectorAll(`select[id^="waluta_${typ}"]`);
+            if (selects.length > 0) {
+                const selectedValue = selects[0].value;
+                selects.forEach(select => {
+                    select.value = selectedValue;
+                });
+                
+                // Zapamiętaj wybraną walutę
+                if (typ === 'towar') {
+                    lastWalutaTowar = selectedValue;
+                } else {
+                    lastWalutaDostawa = selectedValue;
+                }
             }
         }
 
@@ -452,29 +484,47 @@
             toggleTypKursu('towar');
             toggleTypKursu('dostawa');
             
-            // Zapisz wybrane waluty w formularzu
+            // Nasłuchuj zmian w selectach walut
+            document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
+                select.addEventListener('change', function() {
+                    synchronizujWaluty('towar');
+                });
+            });
+            
+            document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
+                select.addEventListener('change', function() {
+                    synchronizujWaluty('dostawa');
+                });
+            });
+            
+            // Przywróć ostatnio wybrane waluty z sessionStorage
+            const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
+            const savedWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
+            
+            if (savedWalutaTowar) {
+                lastWalutaTowar = savedWalutaTowar;
+                document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
+                    select.value = savedWalutaTowar;
+                });
+            }
+            
+            if (savedWalutaDostawa) {
+                lastWalutaDostawa = savedWalutaDostawa;
+                document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
+                    select.value = savedWalutaDostawa;
+                });
+            }
+            
+            // Zapisz wybrane waluty przed wysłaniem formularza
             const vatForm = document.getElementById('vatForm');
             vatForm.addEventListener('submit', function() {
                 if (document.querySelector('input[name="inna_waluta_towar"]').checked) {
-                    const walutaTowar = document.querySelector('select[name="waluta_towar"]').value;
-                    sessionStorage.setItem('lastWalutaTowar', walutaTowar);
+                    sessionStorage.setItem('lastWalutaTowar', lastWalutaTowar);
                 }
                 if (document.querySelector('input[name="inna_waluta_dostawa"]').checked) {
-                    const walutaDostawa = document.querySelector('select[name="waluta_dostawa"]').value;
-                    sessionStorage.setItem('lastWalutaDostawa', walutaDostawa);
+                    sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
                 }
             });
-            
-            // Przywróć wybrane waluty po przeładowaniu
-            const lastWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
-            if (lastWalutaTowar && document.querySelector('select[name="waluta_towar"]')) {
-                document.querySelector('select[name="waluta_towar"]').value = lastWalutaTowar;
-            }
-            
-            const lastWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
-            if (lastWalutaDostawa && document.querySelector('select[name="waluta_dostawa"]')) {
-                document.querySelector('select[name="waluta_dostawa"]').value = lastWalutaDostawa;
-            }
         });
     </script>
 </body>
