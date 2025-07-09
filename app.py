@@ -3,10 +3,35 @@ from flask import Flask, request, render_template, session, redirect, url_for, j
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField
 from wtforms.validators import DataRequired, Optional, NumberRange
+from datetime import datetime
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
 app.config['SESSION_TYPE'] = 'filesystem'
+
+def pobierz_kurs_waluty(waluta, data=None):
+    if not data:
+        data = datetime.now().strftime('%Y-%m-%d')
+    
+    try:
+        if waluta == 'USD':
+            kod = 'USD'
+        elif waluta == 'EUR':
+            kod = 'EUR'
+        elif waluta == 'GBP':
+            kod = 'GBP'
+        else:
+            return None
+        
+        url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{data}/?format=json"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data['rates'][0]['mid']
+        return None
+    except:
+        return None
 
 @app.route('/toggle_dark_mode', methods=['POST'])
 def toggle_dark_mode():
@@ -61,8 +86,30 @@ class KalkulatorVATForm(FlaskForm):
     kwota_dostawy = StringField('Lub wpisz kwotę dostawy:', default="0")
     ilosc_w_dostawie = IntegerField('Ilość sztuk w dostawie:', default=1, validators=[NumberRange(min=1)])
     inna_waluta_towar = BooleanField('Inna waluta niż PLN (towar)', default=False)
+    typ_kursu_towar = SelectField('Typ kursu:', choices=[
+        ('aktualny', 'Aktualny kurs'),
+        ('historyczny', 'Kurs z dnia'),
+        ('wlasny', 'Własny kurs')
+    ], default='aktualny')
+    data_kursu_towar = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
+    waluta_towar = SelectField('Waluta:', choices=[
+        ('USD', 'USD (dolar amerykański)'),
+        ('EUR', 'EUR (euro)'),
+        ('GBP', 'GBP (funt brytyjski)')
+    ], default='USD')
     kurs_waluty_towar = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     inna_waluta_dostawa = BooleanField('Inna waluta niż PLN (dostawa)', default=False)
+    typ_kursu_dostawa = SelectField('Typ kursu:', choices=[
+        ('aktualny', 'Aktualny kurs'),
+        ('historyczny', 'Kurs z dnia'),
+        ('wlasny', 'Własny kurs')
+    ], default='aktualny')
+    data_kursu_dostawa = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
+    waluta_dostawa = SelectField('Waluta:', choices=[
+        ('USD', 'USD (dolar amerykański)'),
+        ('EUR', 'EUR (euro)'),
+        ('GBP', 'GBP (funt brytyjski)')
+    ], default='USD')
     kurs_waluty_dostawa = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     submit = SubmitField('Oblicz')
 
@@ -93,7 +140,6 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=N
         else:
             prowizja = 0
     elif kategoria == "I":
-        # Oblicz prowizję podstawową na podstawie wybranej kategorii
         if kategoria_podstawowa == "A":
             prowizja_podstawowa = cena_sprzedazy * 0.0615
         elif kategoria_podstawowa == "B":
@@ -117,7 +163,6 @@ def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=N
         else:
             prowizja_podstawowa = 0
         
-        # Dodaj 60% do prowizji podstawowej
         prowizja = prowizja_podstawowa * 1.6
     else:
         prowizja = 0
@@ -428,20 +473,26 @@ def index():
         kwota_dostawy = zamien_przecinek_na_kropke(form_vat.kwota_dostawy.data)
         ilosc_w_dostawie = form_vat.ilosc_w_dostawie.data
         
-        # Obsługa waluty dla towaru
         if form_vat.inna_waluta_towar.data:
-            kurs_waluty_towar = zamien_przecinek_na_kropke(form_vat.kurs_waluty_towar.data) if form_vat.kurs_waluty_towar.data else 1.0
+            if form_vat.typ_kursu_towar.data == 'wlasny':
+                kurs_waluty_towar = zamien_przecinek_na_kropke(form_vat.kurs_waluty_towar.data) if form_vat.kurs_waluty_towar.data else 1.0
+            else:
+                data_kursu = form_vat.data_kursu_towar.data if form_vat.typ_kursu_towar.data == 'historyczny' else None
+                kurs_waluty_towar = pobierz_kurs_waluty(form_vat.waluta_towar.data, data_kursu) or 1.0
             cena_netto *= kurs_waluty_towar
         
-        # Obsługa waluty dla dostawy
         if form_vat.inna_waluta_dostawa.data:
-            kurs_waluty_dostawa = zamien_przecinek_na_kropke(form_vat.kurs_waluty_dostawa.data) if form_vat.kurs_waluty_dostawa.data else 1.0
+            if form_vat.typ_kursu_dostawa.data == 'wlasny':
+                kurs_waluty_dostawa = zamien_przecinek_na_kropke(form_vat.kurs_waluty_dostawa.data) if form_vat.kurs_waluty_dostawa.data else 1.0
+            else:
+                data_kursu = form_vat.data_kursu_dostawa.data if form_vat.typ_kursu_dostawa.data == 'historyczny' else None
+                kurs_waluty_dostawa = pobierz_kurs_waluty(form_vat.waluta_dostawa.data, data_kursu) or 1.0
+            
             if kwota_dostawy:
                 kwota_dostawy *= kurs_waluty_dostawa
             else:
                 koszt_dostawy_sztuka *= kurs_waluty_dostawa
 
-        # Oblicz cenę netto za sztukę
         cena_netto_za_sztuke = cena_netto / ilosc_sztuk
 
         if kwota_dostawy and ilosc_w_dostawie:

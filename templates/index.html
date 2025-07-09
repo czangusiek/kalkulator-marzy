@@ -42,7 +42,6 @@
             margin: 0 auto;
         }
 
-        /* NOWE STYLE DLA SELECTÓW */
         select {
             width: 100%;
             padding: 8px;
@@ -53,7 +52,6 @@
             border-radius: 4px;
         }
 
-        /* SPECJALNY STYL TYLKO DLA KATEGORII PODSTAWOWEJ */
         #kategoria-podstawowa-div select {
             width: 250px !important;
             max-width: 100%;
@@ -184,6 +182,13 @@
             display: none;
             margin-top: 10px;
         }
+        .waluta-typ {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
         h1, h2 {
             color: var(--text-color);
         }
@@ -263,15 +268,49 @@
                     {{ form_vat.inna_waluta_towar(onchange="toggleWaluta('towar')") }} Inna waluta niż PLN (towar)
                 </label>
                 <div id="waluta-container-towar" class="waluta-container">
-                    <label for="kurs_waluty_towar">Kurs waluty (1 waluta = X PLN):</label>
-                    {{ form_vat.kurs_waluty_towar(size=20) }}
+                    <label for="typ_kursu_towar">Typ kursu:</label>
+                    {{ form_vat.typ_kursu_towar(onchange="toggleTypKursu('towar')") }}
+                    
+                    <div id="waluta-towar-aktualny" class="waluta-typ">
+                        <label for="waluta_towar">Waluta:</label>
+                        {{ form_vat.waluta_towar() }}
+                    </div>
+                    
+                    <div id="waluta-towar-historyczny" class="waluta-typ" style="display:none;">
+                        <label for="waluta_towar">Waluta:</label>
+                        {{ form_vat.waluta_towar() }}
+                        <label for="data_kursu_towar">Data kursu:</label>
+                        {{ form_vat.data_kursu_towar() }}
+                    </div>
+                    
+                    <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
+                        <label for="kurs_waluty_towar">Kurs waluty (1 waluta = X PLN):</label>
+                        {{ form_vat.kurs_waluty_towar() }}
+                    </div>
                 </div>
                 <label>
                     {{ form_vat.inna_waluta_dostawa(onchange="toggleWaluta('dostawa')") }} Inna waluta niż PLN (dostawa)
                 </label>
                 <div id="waluta-container-dostawa" class="waluta-container">
-                    <label for="kurs_waluty_dostawa">Kurs waluty (1 waluta = X PLN):</label>
-                    {{ form_vat.kurs_waluty_dostawa(size=20) }}
+                    <label for="typ_kursu_dostawa">Typ kursu:</label>
+                    {{ form_vat.typ_kursu_dostawa(onchange="toggleTypKursu('dostawa')") }}
+                    
+                    <div id="waluta-dostawa-aktualny" class="waluta-typ">
+                        <label for="waluta_dostawa">Waluta:</label>
+                        {{ form_vat.waluta_dostawa() }}
+                    </div>
+                    
+                    <div id="waluta-dostawa-historyczny" class="waluta-typ" style="display:none;">
+                        <label for="waluta_dostawa">Waluta:</label>
+                        {{ form_vat.waluta_dostawa() }}
+                        <label for="data_kursu_dostawa">Data kursu:</label>
+                        {{ form_vat.data_kursu_dostawa() }}
+                    </div>
+                    
+                    <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
+                        <label for="kurs_waluty_dostawa">Kurs waluty (1 waluta = X PLN):</label>
+                        {{ form_vat.kurs_waluty_dostawa() }}
+                    </div>
                 </div>
                 <br>
                 {{ form_vat.submit() }}
@@ -309,6 +348,24 @@
                 container.style.display = "block";
             } else {
                 container.style.display = "none";
+            }
+        }
+
+        function toggleTypKursu(typ) {
+            const typKursu = document.querySelector(`select[name="typ_kursu_${typ}"]`).value;
+            
+            // Ukryj wszystkie opcje
+            document.getElementById(`waluta-${typ}-aktualny`).style.display = "none";
+            document.getElementById(`waluta-${typ}-historyczny`).style.display = "none";
+            document.getElementById(`waluta-${typ}-wlasny`).style.display = "none";
+            
+            // Pokaż odpowiednią opcję
+            if (typKursu === "aktualny") {
+                document.getElementById(`waluta-${typ}-aktualny`).style.display = "block";
+            } else if (typKursu === "historyczny") {
+                document.getElementById(`waluta-${typ}-historyczny`).style.display = "block";
+            } else if (typKursu === "wlasny") {
+                document.getElementById(`waluta-${typ}-wlasny`).style.display = "block";
             }
         }
 
@@ -391,6 +448,8 @@
             toggleInnaProwizja();
             toggleWaluta('towar');
             toggleWaluta('dostawa');
+            toggleTypKursu('towar');
+            toggleTypKursu('dostawa');
         });
     </script>
 </body>
