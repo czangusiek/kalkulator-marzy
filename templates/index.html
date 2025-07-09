@@ -298,7 +298,7 @@
                         {{ form_vat.waluta_towar(id="waluta_towar_historyczny_select") }}
                         <label for="data_kursu_towar">Data kursu:</label>
                         <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
-                               value="{{ form_vat.data_kursu_towar.data.strftime('%Y-%m-%d') if form_vat.data_kursu_towar.data else '' }}">
+                               value="{{ form_vat.data_kursu_towar.data if form_vat.data_kursu_towar.data else '' }}">
                     </div>
                     
                     <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
@@ -323,7 +323,7 @@
                         {{ form_vat.waluta_dostawa(id="waluta_dostawa_historyczny_select") }}
                         <label for="data_kursu_dostawa">Data kursu:</label>
                         <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
-                               value="{{ form_vat.data_kursu_dostawa.data.strftime('%Y-%m-%d') if form_vat.data_kursu_dostawa.data else '' }}">
+                               value="{{ form_vat.data_kursu_dostawa.data if form_vat.data_kursu_dostawa.data else '' }}">
                     </div>
                     
                     <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
@@ -372,13 +372,10 @@
                 toggleTypKursu(typ);
                 
                 // Przywróć ostatnio wybraną walutę jeśli istnieje
-                if (typ === 'towar' && lastWalutaTowar) {
-                    document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                        select.value = lastWalutaTowar;
-                    });
-                } else if (typ === 'dostawa' && lastWalutaDostawa) {
-                    document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                        select.value = lastWalutaDostawa;
+                const savedWaluta = sessionStorage.getItem(`lastWaluta${typ.charAt(0).toUpperCase() + typ.slice(1)}`);
+                if (savedWaluta) {
+                    document.querySelectorAll(`select[id^="waluta_${typ}"]`).forEach(select => {
+                        select.value = savedWaluta;
                     });
                 }
             } else {
