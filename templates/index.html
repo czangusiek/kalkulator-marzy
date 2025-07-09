@@ -244,7 +244,7 @@
 
         <div class="kalkulator">
             <h2>Kalkulator VAT</h2>
-            <form method="POST">
+            <form method="POST" id="vatForm">
                 {{ form_vat.hidden_tag() }}
                 <label for="cena_netto">Wpisz cenę netto:</label>
                 {{ form_vat.cena_netto(size=20) }}
@@ -346,6 +346,7 @@
             const container = document.getElementById(`waluta-container-${typ}`);
             if (checkbox.checked) {
                 container.style.display = "block";
+                toggleTypKursu(typ);
             } else {
                 container.style.display = "none";
             }
@@ -450,6 +451,30 @@
             toggleWaluta('dostawa');
             toggleTypKursu('towar');
             toggleTypKursu('dostawa');
+            
+            // Zapisz wybrane waluty w formularzu
+            const vatForm = document.getElementById('vatForm');
+            vatForm.addEventListener('submit', function() {
+                if (document.querySelector('input[name="inna_waluta_towar"]').checked) {
+                    const walutaTowar = document.querySelector('select[name="waluta_towar"]').value;
+                    sessionStorage.setItem('lastWalutaTowar', walutaTowar);
+                }
+                if (document.querySelector('input[name="inna_waluta_dostawa"]').checked) {
+                    const walutaDostawa = document.querySelector('select[name="waluta_dostawa"]').value;
+                    sessionStorage.setItem('lastWalutaDostawa', walutaDostawa);
+                }
+            });
+            
+            // Przywróć wybrane waluty po przeładowaniu
+            const lastWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
+            if (lastWalutaTowar && document.querySelector('select[name="waluta_towar"]')) {
+                document.querySelector('select[name="waluta_towar"]').value = lastWalutaTowar;
+            }
+            
+            const lastWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
+            if (lastWalutaDostawa && document.querySelector('select[name="waluta_dostawa"]')) {
+                document.querySelector('select[name="waluta_dostawa"]').value = lastWalutaDostawa;
+            }
         });
     </script>
 </body>

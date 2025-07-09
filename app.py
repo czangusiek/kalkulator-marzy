@@ -473,20 +473,34 @@ def index():
         kwota_dostawy = zamien_przecinek_na_kropke(form_vat.kwota_dostawy.data)
         ilosc_w_dostawie = form_vat.ilosc_w_dostawie.data
         
+        # Obsługa waluty dla towaru
+        kurs_info_towar = ""
         if form_vat.inna_waluta_towar.data:
             if form_vat.typ_kursu_towar.data == 'wlasny':
                 kurs_waluty_towar = zamien_przecinek_na_kropke(form_vat.kurs_waluty_towar.data) if form_vat.kurs_waluty_towar.data else 1.0
+                kurs_info_towar = f"Użyto własnego kursu: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             else:
                 data_kursu = form_vat.data_kursu_towar.data if form_vat.typ_kursu_towar.data == 'historyczny' else None
                 kurs_waluty_towar = pobierz_kurs_waluty(form_vat.waluta_towar.data, data_kursu) or 1.0
+                if form_vat.typ_kursu_towar.data == 'historyczny':
+                    kurs_info_towar = f"Kurs {form_vat.waluta_towar.data} z dnia {form_vat.data_kursu_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
+                else:
+                    kurs_info_towar = f"Aktualny kurs {form_vat.waluta_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             cena_netto *= kurs_waluty_towar
         
+        # Obsługa waluty dla dostawy
+        kurs_info_dostawa = ""
         if form_vat.inna_waluta_dostawa.data:
             if form_vat.typ_kursu_dostawa.data == 'wlasny':
                 kurs_waluty_dostawa = zamien_przecinek_na_kropke(form_vat.kurs_waluty_dostawa.data) if form_vat.kurs_waluty_dostawa.data else 1.0
+                kurs_info_dostawa = f"Użyto własnego kursu: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             else:
                 data_kursu = form_vat.data_kursu_dostawa.data if form_vat.typ_kursu_dostawa.data == 'historyczny' else None
                 kurs_waluty_dostawa = pobierz_kurs_waluty(form_vat.waluta_dostawa.data, data_kursu) or 1.0
+                if form_vat.typ_kursu_dostawa.data == 'historyczny':
+                    kurs_info_dostawa = f"Kurs {form_vat.waluta_dostawa.data} z dnia {form_vat.data_kursu_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
+                else:
+                    kurs_info_dostawa = f"Aktualny kurs {form_vat.waluta_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             
             if kwota_dostawy:
                 kwota_dostawy *= kurs_waluty_dostawa
@@ -501,8 +515,19 @@ def index():
         cena_brutto_za_sztuke = cena_netto_za_sztuke * (1 + vat / 100)
         cena_brutto_z_dostawa_za_sztuke = cena_brutto_za_sztuke + koszt_dostawy_sztuka
 
+        # Dodanie informacji o kursach do wyników
+        kurs_info_html = ""
+        if form_vat.inna_waluta_towar.data or form_vat.inna_waluta_dostawa.data:
+            kurs_info_html = "<div style='margin-bottom: 20px;'>"
+            if form_vat.inna_waluta_towar.data:
+                kurs_info_html += f"<p><strong>Towar:</strong> {kurs_info_towar}</p>"
+            if form_vat.inna_waluta_dostawa.data:
+                kurs_info_html += f"<p><strong>Dostawa:</strong> {kurs_info_dostawa}</p>"
+            kurs_info_html += "</div>"
+
         session['wynik_vat'] = f"""
         <h3>Wyniki kalkulatora VAT</h3>
+        {kurs_info_html}
         <div class="wynik">
             <table>
                 <tr>
