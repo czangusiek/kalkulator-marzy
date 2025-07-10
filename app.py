@@ -3,7 +3,7 @@ from flask import Flask, request, render_template, session, redirect, url_for, j
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField
 from wtforms.validators import DataRequired, Optional, NumberRange
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 
 app = Flask(__name__)
@@ -11,11 +11,6 @@ app.secret_key = 'tajny_klucz'
 app.config['SESSION_TYPE'] = 'filesystem'
 
 def pobierz_kurs_waluty(waluta, data=None):
-    if not data:
-        data = datetime.now().strftime('%Y-%m-%d')
-    else:
-        data = data.strftime('%Y-%m-%d')
-    
     try:
         if waluta == 'USD':
             kod = 'USD'
@@ -26,13 +21,34 @@ def pobierz_kurs_waluty(waluta, data=None):
         else:
             return None
         
-        url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{data}/?format=json"
+        if data:
+            # Sprawdź czy data nie jest przyszła
+            if datetime.strptime(data, '%Y-%m-%d') > datetime.now():
+                data = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                
+            url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{data}/?format=json"
+        else:
+            url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/?format=json"
+        
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
             return data['rates'][0]['mid']
+        elif response.status_code == 404:
+            # Spróbuj pobrać kurs z poprzedniego dnia roboczego
+            if data:
+                data_dt = datetime.strptime(data, '%Y-%m-%d')
+                for i in range(1, 7):  # Szukaj do 7 dni wstecz
+                    prev_date = (data_dt - timedelta(days=i)).strftime('%Y-%m-%d')
+                    url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{prev_date}/?format=json"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return data['rates'][0]['mid']
+            return None
         return None
-    except:
+    except Exception as e:
+        print(f"Błąd przy pobieraniu kursu: {e}")
         return None
 
 @app.route('/toggle_dark_mode', methods=['POST'])
@@ -116,7 +132,9 @@ class KalkulatorVATForm(FlaskForm):
     submit = SubmitField('Oblicz')
 
 def zamien_przecinek_na_kropke(liczba):
-    return float(liczba.replace(",", "."))
+    if isinstance(liczba, str):
+        return float(liczba.replace(",", "."))
+    return liczba
 
 def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     if kategoria == "A":
@@ -477,32 +495,44 @@ def index():
         
         # Obsługa waluty dla towaru
         kurs_info_towar = ""
+        kurs_error_towar = ""
         if form_vat.inna_waluta_towar.data:
             if form_vat.typ_kursu_towar.data == 'wlasny':
                 kurs_waluty_towar = zamien_przecinek_na_kropke(form_vat.kurs_waluty_towar.data) if form_vat.kurs_waluty_towar.data else 1.0
                 kurs_info_towar = f"Użyto własnego kursu: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             else:
                 data_kursu = form_vat.data_kursu_towar.data if form_vat.typ_kursu_towar.data == 'historyczny' else None
-                kurs_waluty_towar = pobierz_kurs_waluty(form_vat.waluta_towar.data, data_kursu) or 1.0
-                if form_vat.typ_kursu_towar.data == 'historyczny':
-                    kurs_info_towar = f"Kurs {form_vat.waluta_towar.data} z dnia {form_vat.data_kursu_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
+                kurs_waluty_towar = pobierz_kurs_waluty(form_vat.waluta_towar.data, data_kursu)
+                
+                if kurs_waluty_towar is None:
+                    kurs_error_towar = f"Nie udało się pobrać kursu {form_vat.waluta_towar.data}!"
+                    kurs_waluty_towar = 1.0
                 else:
-                    kurs_info_towar = f"Aktualny kurs {form_vat.waluta_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
+                    if form_vat.typ_kursu_towar.data == 'historyczny':
+                        kurs_info_towar = f"Kurs {form_vat.waluta_towar.data} z dnia {form_vat.data_kursu_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
+                    else:
+                        kurs_info_towar = f"Aktualny kurs {form_vat.waluta_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             cena_netto *= kurs_waluty_towar
         
         # Obsługa waluty dla dostawy
         kurs_info_dostawa = ""
+        kurs_error_dostawa = ""
         if form_vat.inna_waluta_dostawa.data:
             if form_vat.typ_kursu_dostawa.data == 'wlasny':
                 kurs_waluty_dostawa = zamien_przecinek_na_kropke(form_vat.kurs_waluty_dostawa.data) if form_vat.kurs_waluty_dostawa.data else 1.0
                 kurs_info_dostawa = f"Użyto własnego kursu: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             else:
                 data_kursu = form_vat.data_kursu_dostawa.data if form_vat.typ_kursu_dostawa.data == 'historyczny' else None
-                kurs_waluty_dostawa = pobierz_kurs_waluty(form_vat.waluta_dostawa.data, data_kursu) or 1.0
-                if form_vat.typ_kursu_dostawa.data == 'historyczny':
-                    kurs_info_dostawa = f"Kurs {form_vat.waluta_dostawa.data} z dnia {form_vat.data_kursu_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
+                kurs_waluty_dostawa = pobierz_kurs_waluty(form_vat.waluta_dostawa.data, data_kursu)
+                
+                if kurs_waluty_dostawa is None:
+                    kurs_error_dostawa = f"Nie udało się pobrać kursu {form_vat.waluta_dostawa.data}!"
+                    kurs_waluty_dostawa = 1.0
                 else:
-                    kurs_info_dostawa = f"Aktualny kurs {form_vat.waluta_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
+                    if form_vat.typ_kursu_dostawa.data == 'historyczny':
+                        kurs_info_dostawa = f"Kurs {form_vat.waluta_dostawa.data} z dnia {form_vat.data_kursu_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
+                    else:
+                        kurs_info_dostawa = f"Aktualny kurs {form_vat.waluta_dostawa.data}: 1 {form_vat.waluta_dostawa.data} = {kurs_waluty_dostawa:.4f} PLN"
             
             if kwota_dostawy:
                 kwota_dostawy *= kurs_waluty_dostawa
@@ -522,9 +552,15 @@ def index():
         if form_vat.inna_waluta_towar.data or form_vat.inna_waluta_dostawa.data:
             kurs_info_html = "<div style='margin-bottom: 20px;'>"
             if form_vat.inna_waluta_towar.data:
-                kurs_info_html += f"<p><strong>Towar:</strong> {kurs_info_towar}</p>"
+                if kurs_error_towar:
+                    kurs_info_html += f"<p style='color:var(--red-color);'><strong>Błąd towaru:</strong> {kurs_error_towar}</p>"
+                else:
+                    kurs_info_html += f"<p><strong>Towar:</strong> {kurs_info_towar}</p>"
             if form_vat.inna_waluta_dostawa.data:
-                kurs_info_html += f"<p><strong>Dostawa:</strong> {kurs_info_dostawa}</p>"
+                if kurs_error_dostawa:
+                    kurs_info_html += f"<p style='color:var(--red-color);'><strong>Błąd dostawy:</strong> {kurs_error_dostawa}</p>"
+                else:
+                    kurs_info_html += f"<p><strong>Dostawa:</strong> {kurs_info_dostawa}</p>"
             kurs_info_html += "</div>"
 
         session['wynik_vat'] = f"""

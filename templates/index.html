@@ -290,15 +290,23 @@
                     
                     <div id="waluta-towar-aktualny" class="waluta-typ">
                         <label for="waluta_towar">Waluta:</label>
-                        {{ form_vat.waluta_towar(id="waluta_towar_select") }}
+                        <select id="waluta_towar_select" name="waluta_towar">
+                            <option value="USD">USD (dolar amerykański)</option>
+                            <option value="EUR">EUR (euro)</option>
+                            <option value="GBP">GBP (funt brytyjski)</option>
+                        </select>
                     </div>
                     
                     <div id="waluta-towar-historyczny" class="waluta-typ" style="display:none;">
                         <label for="waluta_towar">Waluta:</label>
-                        {{ form_vat.waluta_towar(id="waluta_towar_historyczny_select") }}
+                        <select id="waluta_towar_historyczny_select" name="waluta_towar">
+                            <option value="USD">USD (dolar amerykański)</option>
+                            <option value="EUR">EUR (euro)</option>
+                            <option value="GBP">GBP (funt brytyjski)</option>
+                        </select>
                         <label for="data_kursu_towar">Data kursu:</label>
                         <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
-                               value="{{ form_vat.data_kursu_towar.data if form_vat.data_kursu_towar.data else '' }}">
+                               value="{{ form_vat.data_kursu_towar.data }}">
                     </div>
                     
                     <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
@@ -315,15 +323,23 @@
                     
                     <div id="waluta-dostawa-aktualny" class="waluta-typ">
                         <label for="waluta_dostawa">Waluta:</label>
-                        {{ form_vat.waluta_dostawa(id="waluta_dostawa_select") }}
+                        <select id="waluta_dostawa_select" name="waluta_dostawa">
+                            <option value="USD">USD (dolar amerykański)</option>
+                            <option value="EUR">EUR (euro)</option>
+                            <option value="GBP">GBP (funt brytyjski)</option>
+                        </select>
                     </div>
                     
                     <div id="waluta-dostawa-historyczny" class="waluta-typ" style="display:none;">
                         <label for="waluta_dostawa">Waluta:</label>
-                        {{ form_vat.waluta_dostawa(id="waluta_dostawa_historyczny_select") }}
+                        <select id="waluta_dostawa_historyczny_select" name="waluta_dostawa">
+                            <option value="USD">USD (dolar amerykański)</option>
+                            <option value="EUR">EUR (euro)</option>
+                            <option value="GBP">GBP (funt brytyjski)</option>
+                        </select>
                         <label for="data_kursu_dostawa">Data kursu:</label>
                         <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
-                               value="{{ form_vat.data_kursu_dostawa.data if form_vat.data_kursu_dostawa.data else '' }}">
+                               value="{{ form_vat.data_kursu_dostawa.data }}">
                     </div>
                     
                     <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
@@ -401,20 +417,22 @@
             }
         }
 
-        function synchronizujWaluty(typ) {
+        function synchronizujWaluty(typ, event) {
+            const changedSelect = event.target;
             const selects = document.querySelectorAll(`select[id^="waluta_${typ}"]`);
-            if (selects.length > 0) {
-                const selectedValue = selects[0].value;
-                selects.forEach(select => {
-                    select.value = selectedValue;
-                });
-                
-                // Zapamiętaj wybraną walutę
-                if (typ === 'towar') {
-                    lastWalutaTowar = selectedValue;
-                } else {
-                    lastWalutaDostawa = selectedValue;
+            
+            // Ustaw tę samą wartość dla wszystkich selectów w tej grupie
+            selects.forEach(select => {
+                if (select !== changedSelect) {
+                    select.value = changedSelect.value;
                 }
+            });
+            
+            // Zapamiętaj wybraną walutę
+            if (typ === 'towar') {
+                lastWalutaTowar = changedSelect.value;
+            } else {
+                lastWalutaDostawa = changedSelect.value;
             }
         }
 
@@ -503,19 +521,6 @@
             toggleTypKursu('towar');
             toggleTypKursu('dostawa');
             
-            // Nasłuchuj zmian w selectach walut
-            document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                select.addEventListener('change', function() {
-                    synchronizujWaluty('towar');
-                });
-            });
-            
-            document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                select.addEventListener('change', function() {
-                    synchronizujWaluty('dostawa');
-                });
-            });
-            
             // Przywróć ostatnio wybrane waluty z sessionStorage
             const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
             const savedWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
@@ -533,6 +538,19 @@
                     select.value = savedWalutaDostawa;
                 });
             }
+            
+            // Nasłuchuj zmian w selectach walut
+            document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
+                select.addEventListener('change', function(event) {
+                    synchronizujWaluty('towar', event);
+                });
+            });
+            
+            document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
+                select.addEventListener('change', function(event) {
+                    synchronizujWaluty('dostawa', event);
+                });
+            });
             
             // Zapisz wybrane waluty przed wysłaniem formularza
             const vatForm = document.getElementById('vatForm');
