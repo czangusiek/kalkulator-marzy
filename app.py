@@ -432,9 +432,9 @@ def index():
                             <th>Marża (dostawa maksymalna)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_minimalna:.2f}" 
+                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f}" 
                                       style="color:var(--green-color);">
-                                    {cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_minimalna:.2f} zł
+                                    {cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
