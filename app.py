@@ -22,7 +22,6 @@ def pobierz_kurs_waluty(waluta, data=None):
             return None
         
         if data:
-            # Sprawdź czy data nie jest przyszła
             if datetime.strptime(data, '%Y-%m-%d') > datetime.now():
                 data = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
                 
@@ -35,10 +34,9 @@ def pobierz_kurs_waluty(waluta, data=None):
             data = response.json()
             return data['rates'][0]['mid']
         elif response.status_code == 404:
-            # Spróbuj pobrać kurs z poprzedniego dnia roboczego
             if data:
                 data_dt = datetime.strptime(data, '%Y-%m-%d')
-                for i in range(1, 7):  # Szukaj do 7 dni wstecz
+                for i in range(1, 7):
                     prev_date = (data_dt - timedelta(days=i)).strftime('%Y-%m-%d')
                     url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{prev_date}/?format=json"
                     response = requests.get(url)
@@ -220,6 +218,69 @@ def oblicz_dostawe_maksymalna(cena_sprzedazy):
     else:
         return 11.49
 
+def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
+    if cena_sprzedazy < 30:
+        return {
+            'Allegro Paczkomaty InPost': 0,
+            'Allegro Automat Pocztex': 0,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 0,
+            'Allegro Kurier UPS': 0,
+            'Allegro Kurier DHL (Allegro Delivery)': 0,
+            'Allegro Kurier Pocztex': 0,
+            'Allegro One Kurier (Allegro Delivery)': 0
+        }
+    
+    if 30 <= cena_sprzedazy < 45:
+        return {
+            'Allegro Paczkomaty InPost': 1.59,
+            'Allegro Automat Pocztex': 1.29,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 0.99,
+            'Allegro Kurier UPS': 1.99,
+            'Allegro Kurier DHL (Allegro Delivery)': 1.79,
+            'Allegro Kurier Pocztex': 1.99,
+            'Allegro One Kurier (Allegro Delivery)': 1.79
+        }
+    elif 45 <= cena_sprzedazy < 65:
+        return {
+            'Allegro Paczkomaty InPost': 3.09,
+            'Allegro Automat Pocztex': 2.49,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.89,
+            'Allegro Kurier UPS': 3.99,
+            'Allegro Kurier DHL (Allegro Delivery)': 3.69,
+            'Allegro Kurier Pocztex': 3.99,
+            'Allegro One Kurier (Allegro Delivery)': 3.69
+        }
+    elif 65 <= cena_sprzedazy < 100:
+        return {
+            'Allegro Paczkomaty InPost': 4.99,
+            'Allegro Automat Pocztex': 4.29,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.59,
+            'Allegro Kurier UPS': 5.79,
+            'Allegro Kurier DHL (Allegro Delivery)': 5.39,
+            'Allegro Kurier Pocztex': 5.79,
+            'Allegro One Kurier (Allegro Delivery)': 5.39
+        }
+    elif 100 <= cena_sprzedazy < 150:
+        return {
+            'Allegro Paczkomaty InPost': 7.59,
+            'Allegro Automat Pocztex': 6.69,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89,
+            'Allegro Kurier UPS': 9.09,
+            'Allegro Kurier DHL (Allegro Delivery)': 8.59,
+            'Allegro Kurier Pocztex': 9.09,
+            'Allegro One Kurier (Allegro Delivery)': 8.59
+        }
+    else:  # cena_sprzedazy >= 150
+        return {
+            'Allegro Paczkomaty InPost': 9.99,
+            'Allegro Automat Pocztex': 8.89,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.79,
+            'Allegro Kurier UPS': 11.49,
+            'Allegro Kurier DHL (Allegro Delivery)': 10.89,
+            'Allegro Kurier Pocztex': 11.49,
+            'Allegro One Kurier (Allegro Delivery)': 10.89
+        }
+
 def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     sugerowana_cena = cena_zakupu
     if marza_kwota:
@@ -366,6 +427,16 @@ def index():
                         </td>
                     </tr>
                     <tr>
+                        <th>Prowizja czysta (bez dostawy)</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{prowizja_min:.2f}" 
+                                  style="color:var(--red-color);">
+                                {prowizja_min:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
                         <th>Prowizja z dostawą minimalną</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
@@ -439,6 +510,16 @@ def index():
                             </td>
                         </tr>
                         <tr>
+                            <th>Prowizja czysta (bez dostawy)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_min_promo:.2f}" 
+                                      style="color:var(--red-color);">
+                                    {prowizja_min_promo:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Prowizja z dostawą minimalną</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
@@ -481,9 +562,81 @@ def index():
                     </table>
                 </div>
                 """
-                session['wynik_marza'] = f"{wynik_bez_promowania}<hr>{wynik_z_promowaniem}"
+                
+                # Tabela marż dla przewoźników (tylko bez promowania)
+                koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy)
+                tabela_przewoznikow = ""
+                for przewoznik, koszt in koszty_dostaw.items():
+                    marza = cena_sprzedazy - cena_zakupu - prowizja_min - koszt
+                    tabela_przewoznikow += f"""
+                    <tr>
+                        <td>{przewoznik}</td>
+                        <td>{koszt:.2f} zł</td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza:.2f}" style="color:var(--green-color);">
+                                {marza:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    """
+                
+                wynik_przewoznicy = f"""
+                <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
+                <div class="wynik">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Przewoźnik</th>
+                                <th>Koszt dostawy</th>
+                                <th>Marża</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tabela_przewoznikow}
+                        </tbody>
+                    </table>
+                </div>
+                """
+                
+                session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}<hr>{wynik_z_promowaniem}"
             else:
-                session['wynik_marza'] = wynik_bez_promowania
+                # Tabela marż dla przewoźników dla kategorii I
+                koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy)
+                tabela_przewoznikow = ""
+                for przewoznik, koszt in koszty_dostaw.items():
+                    marza = cena_sprzedazy - cena_zakupu - prowizja_min - koszt
+                    tabela_przewoznikow += f"""
+                    <tr>
+                        <td>{przewoznik}</td>
+                        <td>{koszt:.2f} zł</td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza:.2f}" style="color:var(--green-color);">
+                                {marza:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    """
+                
+                wynik_przewoznicy = f"""
+                <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
+                <div class="wynik">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Przewoźnik</th>
+                                <th>Koszt dostawy</th>
+                                <th>Marża</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tabela_przewoznikow}
+                        </tbody>
+                    </table>
+                </div>
+                """
+                session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}"
 
     if form_vat.submit.data and form_vat.validate():
         cena_netto = zamien_przecinek_na_kropke(form_vat.cena_netto.data)
@@ -493,7 +646,6 @@ def index():
         kwota_dostawy = zamien_przecinek_na_kropke(form_vat.kwota_dostawy.data)
         ilosc_w_dostawie = form_vat.ilosc_w_dostawie.data
         
-        # Obsługa waluty dla towaru
         kurs_info_towar = ""
         kurs_error_towar = ""
         if form_vat.inna_waluta_towar.data:
@@ -514,7 +666,6 @@ def index():
                         kurs_info_towar = f"Aktualny kurs {form_vat.waluta_towar.data}: 1 {form_vat.waluta_towar.data} = {kurs_waluty_towar:.4f} PLN"
             cena_netto *= kurs_waluty_towar
         
-        # Obsługa waluty dla dostawy
         kurs_info_dostawa = ""
         kurs_error_dostawa = ""
         if form_vat.inna_waluta_dostawa.data:
@@ -547,7 +698,6 @@ def index():
         cena_brutto_za_sztuke = cena_netto_za_sztuke * (1 + vat / 100)
         cena_brutto_z_dostawa_za_sztuke = cena_brutto_za_sztuke + koszt_dostawy_sztuka
 
-        # Dodanie informacji o kursach do wyników
         kurs_info_html = ""
         if form_vat.inna_waluta_towar.data or form_vat.inna_waluta_dostawa.data:
             kurs_info_html = "<div style='margin-bottom: 20px;'>"

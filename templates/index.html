@@ -193,7 +193,6 @@
             color: var(--text-color);
         }
 
-        /* Styl dla inputów typu date */
         input[type="date"] {
             padding: 8px;
             margin-bottom: 10px;
@@ -205,7 +204,6 @@
             border-radius: 4px;
         }
 
-        /* Ukrycie domyślnej ikony kalendarza w niektórych przeglądarkach */
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(var(--dark-mode-invert, 0));
         }
@@ -359,7 +357,6 @@
     </div>
 
     <script>
-        // Zmienne do przechowywania stanu walut
         let lastWalutaTowar = null;
         let lastWalutaDostawa = null;
 
@@ -387,7 +384,6 @@
                 container.style.display = "block";
                 toggleTypKursu(typ);
                 
-                // Przywróć ostatnio wybraną walutę jeśli istnieje
                 const savedWaluta = sessionStorage.getItem(`lastWaluta${typ.charAt(0).toUpperCase() + typ.slice(1)}`);
                 if (savedWaluta) {
                     document.querySelectorAll(`select[id^="waluta_${typ}"]`).forEach(select => {
@@ -402,12 +398,10 @@
         function toggleTypKursu(typ) {
             const typKursu = document.querySelector(`select[name="typ_kursu_${typ}"]`).value;
             
-            // Ukryj wszystkie opcje
             document.getElementById(`waluta-${typ}-aktualny`).style.display = "none";
             document.getElementById(`waluta-${typ}-historyczny`).style.display = "none";
             document.getElementById(`waluta-${typ}-wlasny`).style.display = "none";
             
-            // Pokaż odpowiednią opcję
             if (typKursu === "aktualny") {
                 document.getElementById(`waluta-${typ}-aktualny`).style.display = "block";
             } else if (typKursu === "historyczny") {
@@ -421,14 +415,12 @@
             const changedSelect = event.target;
             const selects = document.querySelectorAll(`select[id^="waluta_${typ}"]`);
             
-            // Ustaw tę samą wartość dla wszystkich selectów w tej grupie
             selects.forEach(select => {
                 if (select !== changedSelect) {
                     select.value = changedSelect.value;
                 }
             });
             
-            // Zapamiętaj wybraną walutę
             if (typ === 'towar') {
                 lastWalutaTowar = changedSelect.value;
             } else {
@@ -476,7 +468,6 @@
             document.documentElement.style.setProperty('--green-color', colors.green);
             document.documentElement.style.setProperty('--blue-color', colors.blue);
             
-            // Ustawienie zmiennej CSS dla ikony kalendarza
             document.documentElement.style.setProperty('--dark-mode-invert', isDarkMode ? '1' : '0');
         }
 
@@ -521,7 +512,6 @@
             toggleTypKursu('towar');
             toggleTypKursu('dostawa');
             
-            // Przywróć ostatnio wybrane waluty z sessionStorage
             const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
             const savedWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
             
@@ -539,7 +529,6 @@
                 });
             }
             
-            // Nasłuchuj zmian w selectach walut
             document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
                 select.addEventListener('change', function(event) {
                     synchronizujWaluty('towar', event);
@@ -552,7 +541,6 @@
                 });
             });
             
-            // Zapisz wybrane waluty przed wysłaniem formularza
             const vatForm = document.getElementById('vatForm');
             vatForm.addEventListener('submit', function() {
                 if (document.querySelector('input[name="inna_waluta_towar"]').checked) {
