@@ -346,6 +346,16 @@ def index():
             marza_maksymalna = cena_sprzedazy - cena_zakupu - prowizja_max
             sugerowana_cena = cena_zakupu / 0.84
 
+            # Nowe obliczenia dla Ceneo
+            prowizja_min_kawa = cena_sprzedazy * 0.06
+            marza_max_kawa = cena_sprzedazy - cena_zakupu - prowizja_min_kawa
+            prowizja_akcesoria = cena_sprzedazy * 0.077
+            marza_akcesoria = cena_sprzedazy - cena_zakupu - prowizja_akcesoria
+            prowizja_syropy = cena_sprzedazy * 0.0813
+            marza_syropy = cena_sprzedazy - cena_zakupu - prowizja_syropy
+            prowizja_max_agd = cena_sprzedazy * 0.0882
+            marza_min_agd = cena_sprzedazy - cena_zakupu - prowizja_max_agd
+
             session['wynik_marza'] = f"""
             <h3>Wyniki dla kategorii G (Sklep internetowy)</h3>
             <div class="wynik">
@@ -392,6 +402,83 @@ def index():
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">
                                 {sugerowana_cena:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <h4>Dodatkowo dla Ceneo:</h4>
+            <div class="wynik">
+                <table>
+                    <tr>
+                        <th>Prowizja minimalna (kawa, herbata)</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{prowizja_min_kawa:.2f}" style="color:var(--red-color);">
+                                {prowizja_min_kawa:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Marża maksymalna (kawa, herbata)</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza_max_kawa:.2f}" style="color:var(--green-color);">
+                                {marza_max_kawa:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Prowizja akcesoria i słodycze</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{prowizja_akcesoria:.2f}" style="color:var(--red-color);">
+                                {prowizja_akcesoria:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Marża akcesoria i słodycze</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza_akcesoria:.2f}" style="color:var(--green-color);">
+                                {marza_akcesoria:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Prowizja syropy</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{prowizja_syropy:.2f}" style="color:var(--red-color);">
+                                {prowizja_syropy:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Marża syropy</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza_syropy:.2f}" style="color:var(--green-color);">
+                                {marza_syropy:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Prowizja maksymalna (małe AGD)</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{prowizja_max_agd:.2f}" style="color:var(--red-color);">
+                                {prowizja_max_agd:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Marża minimalna (małe AGD)</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza_min_agd:.2f}" style="color:var(--green-color);">
+                                {marza_min_agd:.2f} zł
                             </span>
                         </td>
                     </tr>
