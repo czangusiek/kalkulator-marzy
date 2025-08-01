@@ -102,6 +102,43 @@
             background-color: #45a049;
         }
 
+        .statystyki-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--table-header-bg);
+            margin: 0 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--blue-color);
+        }
+
+        .podobienstwo-box {
+            text-align: center;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--table-header-bg);
+            margin-bottom: 20px;
+        }
+
+        .podobienstwo-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--green-color);
+        }
+
         .roznice {
             white-space: pre-wrap;
             font-family: monospace;
@@ -164,6 +201,28 @@
             </div>
             <input type="submit" value="Porównaj teksty">
         </form>
+
+        {% if roznice or podobienstwo is defined %}
+        <div class="statystyki-container">
+            <div class="stat-box">
+                <h3>Statystyki Tekstu 1</h3>
+                <p>Znaki: <span class="stat-value">{{ statystyki1.znaki }}</span></p>
+                <p>Słowa: <span class="stat-value">{{ statystyki1.slowa }}</span></p>
+                <p>Linie: <span class="stat-value">{{ statystyki1.linie }}</span></p>
+            </div>
+            <div class="stat-box">
+                <h3>Statystyki Tekstu 2</h3>
+                <p>Znaki: <span class="stat-value">{{ statystyki2.znaki }}</span></p>
+                <p>Słowa: <span class="stat-value">{{ statystyki2.slowa }}</span></p>
+                <p>Linie: <span class="stat-value">{{ statystyki2.linie }}</span></p>
+            </div>
+        </div>
+        
+        <div class="podobienstwo-box">
+            <h3>Podobieństwo tekstów</h3>
+            <p><span class="podobienstwo-value">{{ podobienstwo|round(2) }}%</span></p>
+        </div>
+        {% endif %}
 
         {% if roznice %}
         <div class="wynik">

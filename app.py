@@ -904,24 +904,52 @@ def porownaj():
     tekst1 = ""
     tekst2 = ""
     roznice = ""
+    statystyki1 = {"znaki": 0, "slowa": 0, "linie": 0}
+    statystyki2 = {"znaki": 0, "slowa": 0, "linie": 0}
+    podobienstwo = 0.0
     
     if request.method == "POST":
         tekst1 = request.form.get("tekst1", "")
         tekst2 = request.form.get("tekst2", "")
         
-        if tekst1 or tekst2:
+        # Oblicz statystyki dla tekstu 1
+        statystyki1 = {
+            "znaki": len(tekst1),
+            "slowa": len(tekst1.split()) if tekst1 else 0,
+            "linie": len(tekst1.splitlines()) if tekst1 else 0
+        }
+        
+        # Oblicz statystyki dla tekstu 2
+        statystyki2 = {
+            "znaki": len(tekst2),
+            "slowa": len(tekst2.split()) if tekst2 else 0,
+            "linie": len(tekst2.splitlines()) if tekst2 else 0
+        }
+        
+        if tekst1 and tekst2:
+            # Oblicz podobieństwo między tekstami
+            sekwencja = difflib.SequenceMatcher(None, tekst1, tekst2)
+            podobienstwo = sekwencja.ratio() * 100  # jako procent
+            
             d = difflib.Differ()
             roznice = list(d.compare(
                 tekst1.splitlines(), 
                 tekst2.splitlines()
             ))
             roznice = "\n".join(roznice)
+        elif tekst1 or tekst2:
+            # Jeśli tylko jeden tekst, to podobieństwo 0%
+            podobienstwo = 0.0
+            roznice = ""
 
     return render_template(
         "porownaj.html",
         tekst1=tekst1,
         tekst2=tekst2,
-        roznice=roznice
+        roznice=roznice,
+        statystyki1=statystyki1,
+        statystyki2=statystyki2,
+        podobienstwo=podobienstwo
     )
 
 if __name__ == "__main__":
