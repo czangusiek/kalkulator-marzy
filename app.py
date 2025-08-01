@@ -1,10 +1,11 @@
 import os
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField
+from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, TextAreaField
 from wtforms.validators import DataRequired, Optional, NumberRange
 from datetime import datetime, timedelta
 import requests
+import difflib
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
@@ -869,6 +870,58 @@ def index():
         form_vat=form_vat,
         wynik_marza=session.get('wynik_marza'),
         wynik_vat=session.get('wynik_vat')
+    )
+
+@app.route("/licznik", methods=["GET", "POST"])
+def licznik():
+    if 'dark_mode' not in session:
+        session['dark_mode'] = False
+        
+    text = ""
+    znaki = 0
+    slowa = 0
+    linie = 0
+    
+    if request.method == "POST":
+        text = request.form.get("tekst", "")
+        znaki = len(text)
+        slowa = len(text.split()) if text else 0
+        linie = len(text.splitlines()) if text else 0
+
+    return render_template(
+        "licznik.html",
+        text=text,
+        znaki=znaki,
+        slowa=slowa,
+        linie=linie
+    )
+
+@app.route("/porownaj", methods=["GET", "POST"])
+def porownaj():
+    if 'dark_mode' not in session:
+        session['dark_mode'] = False
+        
+    tekst1 = ""
+    tekst2 = ""
+    roznice = ""
+    
+    if request.method == "POST":
+        tekst1 = request.form.get("tekst1", "")
+        tekst2 = request.form.get("tekst2", "")
+        
+        if tekst1 or tekst2:
+            d = difflib.Differ()
+            roznice = list(d.compare(
+                tekst1.splitlines(), 
+                tekst2.splitlines()
+            ))
+            roznice = "\n".join(roznice)
+
+    return render_template(
+        "porownaj.html",
+        tekst1=tekst1,
+        tekst2=tekst2,
+        roznice=roznice
     )
 
 if __name__ == "__main__":

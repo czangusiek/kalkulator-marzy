@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pl" class="{{ 'dark-mode' if session.get('dark_mode') else '' }}">
+<head>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Licznik tekstu</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --table-header-bg: #f2f2f2;
+            --table-border: #ddd;
+            --container-bg: #f9f9f9;
+            --container-border: #ccc;
+            --hr-color: #ccc;
+            --red-color: #ff0000;
+            --green-color: #008000;
+            --blue-color: #0000ff;
+        }
+
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --table-header-bg: #1e1e1e;
+            --table-border: #444;
+            --container-bg: #1a1a1a;
+            --container-border: #555;
+            --hr-color: #555;
+            --red-color: #ff6b6b;
+            --green-color: #6bff6b;
+            --blue-color: #6b6bff;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nawigacja {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid var(--container-border);
+        }
+
+        .nawigacja a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: var(--blue-color);
+            font-weight: bold;
+        }
+
+        .nawigacja a.aktywny {
+            color: var(--green-color);
+            text-decoration: underline;
+        }
+
+        .kalkulator {
+            padding: 20px;
+            border: 1px solid var(--container-border);
+            border-radius: 5px;
+            background-color: var(--container-bg);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .wynik-licznika {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--container-border);
+            border-radius: 5px;
+            background-color: var(--container-bg);
+        }
+
+        .statystyki {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+            border: 1px solid var(--table-border);
+            border-radius: 5px;
+            background-color: var(--table-header-bg);
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--blue-color);
+        }
+
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+        {{ '🌞' if session.get('dark_mode') else '🌓' }}
+    </button>
+
+    <h1>Licznik tekstu</h1>
+    <div class="nawigacja">
+        <a href="/">Kalkulator</a> | 
+        <a href="/licznik" class="aktywny">Licznik</a> | 
+        <a href="/porownaj">Porównywarka</a>
+    </div>
+    
+    <div class="kalkulator">
+        <form method="POST">
+            <label for="tekst">Wprowadź tekst:</label>
+            <textarea id="tekst" name="tekst">{{ text }}</textarea>
+            <br>
+            <input type="submit" value="Oblicz">
+        </form>
+
+        {% if znaki > 0 %}
+        <div class="wynik-licznika">
+            <h3>Statystyki tekstu:</h3>
+            <div class="statystyki">
+                <div class="stat-box">
+                    <div class="stat-value">{{ znaki }}</div>
+                    <div>znaki</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ slowa }}</div>
+                    <div>słowa</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ linie }}</div>
+                    <div>linie</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            fetch('/toggle_dark_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.body.classList.toggle('dark-mode', data.dark_mode);
+                    document.querySelector('.dark-mode-toggle').textContent = data.icon;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

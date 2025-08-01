@@ -42,6 +42,24 @@
             margin: 0 auto;
         }
 
+        .nawigacja {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid var(--container-border);
+        }
+
+        .nawigacja a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: var(--blue-color);
+            font-weight: bold;
+        }
+
+        .nawigacja a.aktywny {
+            color: var(--green-color);
+            text-decoration: underline;
+        }
+
         select {
             width: 100%;
             padding: 8px;
@@ -221,6 +239,12 @@
     </button>
 
     <h1>Kalkulator marży i VAT</h1>
+    <div class="nawigacja">
+        <a href="/" class="aktywny">Kalkulator</a> | 
+        <a href="/licznik">Licznik</a> | 
+        <a href="/porownaj">Porównywarka</a>
+    </div>
+    
     <div class="container">
         <div class="kalkulator">
             <h2>Kalkulator marży</h2>
