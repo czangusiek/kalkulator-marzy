@@ -226,6 +226,10 @@
             filter: invert(var(--dark-mode-invert, 0));
         }
 
+        .tryb-nie-smart {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -271,6 +275,17 @@
                 </div>
                 <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
+                <br>
+                <div id="czy-smart-div">
+                    <label>
+                        {{ form_marza.czy_smart(onchange="toggleTrybSmart()") }} Czy smart?
+                    </label>
+                </div>
+                <div id="tryb-nie-smart-div" class="tryb-nie-smart">
+                    <label for="kwota_dostawy_smart">Kwota dostawy:</label>
+                    {{ form_marza.kwota_dostawy_smart(size=20) }}
+                    <br>
+                </div>
                 <br>
                 {{ form_marza.submit() }}
             </form>
@@ -326,7 +341,7 @@
                             <option value="EUR">EUR (euro)</option>
                             <option value="GBP">GBP (funt brytyjski)</option>
                         </select>
-                        <label for="data_kursu_towar">Data kursu:</label>
+                        <label for="data_kursu_towar">Data kursu (RRRR-MM-DD):</label>
                         <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
                                value="{{ form_vat.data_kursu_towar.data }}">
                     </div>
@@ -359,7 +374,7 @@
                             <option value="EUR">EUR (euro)</option>
                             <option value="GBP">GBP (funt brytyjski)</option>
                         </select>
-                        <label for="data_kursu_dostawa">Data kursu:</label>
+                        <label for="data_kursu_dostawa">Data kursu (RRRR-MM-DD):</label>
                         <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
                                value="{{ form_vat.data_kursu_dostawa.data }}">
                     </div>
@@ -388,16 +403,40 @@
             const kategoria = document.getElementById("kategoria").value;
             const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
             const kategoriaPodstawowaDiv = document.getElementById("kategoria-podstawowa-div");
+            const czySmartDiv = document.getElementById("czy-smart-div");
+            const trybNieSmartDiv = document.getElementById("tryb-nie-smart-div");
             
             if (kategoria === "H") {
                 innaProwizjaDiv.style.display = "block";
                 kategoriaPodstawowaDiv.style.display = "none";
+                czySmartDiv.style.display = "block";
+                trybNieSmartDiv.style.display = "none";
             } else if (kategoria === "I") {
                 innaProwizjaDiv.style.display = "none";
                 kategoriaPodstawowaDiv.style.display = "block";
+                czySmartDiv.style.display = "none";
+                trybNieSmartDiv.style.display = "none";
+            } else if (kategoria === "G") {
+                innaProwizjaDiv.style.display = "none";
+                kategoriaPodstawowaDiv.style.display = "none";
+                czySmartDiv.style.display = "none";
+                trybNieSmartDiv.style.display = "none";
             } else {
                 innaProwizjaDiv.style.display = "none";
                 kategoriaPodstawowaDiv.style.display = "none";
+                czySmartDiv.style.display = "block";
+                trybNieSmartDiv.style.display = "none";
+            }
+        }
+
+        function toggleTrybSmart() {
+            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
+            const trybNieSmartDiv = document.getElementById("tryb-nie-smart-div");
+            
+            if (!czySmart) {
+                trybNieSmartDiv.style.display = "block";
+            } else {
+                trybNieSmartDiv.style.display = "none";
             }
         }
 
@@ -531,6 +570,7 @@
             document.body.classList.toggle('dark-mode', darkMode);
             updateColors(darkMode);
             toggleInnaProwizja();
+            toggleTrybSmart();
             toggleWaluta('towar');
             toggleWaluta('dostawa');
             toggleTypKursu('towar');

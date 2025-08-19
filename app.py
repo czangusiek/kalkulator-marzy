@@ -89,6 +89,8 @@ class KalkulatorMarzyForm(FlaskForm):
         ('H', 'Inna prowizja')
     ], validators=[Optional()])
     ilosc_w_zestawie = StringField('Ilość w zestawie:', default="1", validators=[DataRequired()])
+    czy_smart = BooleanField('Czy smart?', default=True)
+    kwota_dostawy_smart = StringField('Kwota dostawy:', default="0")
     submit = SubmitField('Oblicz')
 
 class KalkulatorVATForm(FlaskForm):
@@ -325,66 +327,43 @@ def index():
         inna_prowizja = form_marza.inna_prowizja.data
         kategoria_podstawowa = form_marza.kategoria_podstawowa.data if kategoria == "I" else None
         ilosc_w_zestawie = zamien_przecinek_na_kropke(form_marza.ilosc_w_zestawie.data)
+        czy_smart = form_marza.czy_smart.data
+        kwota_dostawy_smart = zamien_przecinek_na_kropke(form_marza.kwota_dostawy_smart.data) if form_marza.kwota_dostawy_smart.data else 0
 
-        cena_zakupu *= ilosc_w_zestawie
-        cena_sprzedazy *= ilosc_w_zestawie
+        cena_zakupu_total = cena_zakupu * ilosc_w_zestawie
+        cena_sprzedazy_total = cena_sprzedazy * ilosc_w_zestawie
 
         if kategoria == "H" and inna_prowizja:
             inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
-            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=inna_prowizja)
-        elif kategoria == "I":
-            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, kategoria_podstawowa=kategoria_podstawowa)
-        else:
-            prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False)
 
-        dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy)
-        dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy)
-
-        if kategoria == "G":
-            koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy)
-            maksymalny_koszt = prowizja_max + koszt_wysylki
-            marza_darmowa_wysylka = cena_sprzedazy - cena_zakupu - maksymalny_koszt
-            marza_maksymalna = cena_sprzedazy - cena_zakupu - prowizja_max
-            sugerowana_cena = cena_zakupu / 0.84
-
-            # Nowe obliczenia dla Ceneo
-            prowizja_min_kawa = cena_sprzedazy * 0.06
-            marza_max_kawa = cena_sprzedazy - cena_zakupu - prowizja_min_kawa
-            prowizja_akcesoria = cena_sprzedazy * 0.077
-            marza_akcesoria = cena_sprzedazy - cena_zakupu - prowizja_akcesoria
-            prowizja_syropy = cena_sprzedazy * 0.0813
-            marza_syropy = cena_sprzedazy - cena_zakupu - prowizja_syropy
-            prowizja_max_agd = cena_sprzedazy * 0.0882
-            marza_min_agd = cena_sprzedazy - cena_zakupu - prowizja_max_agd
-
-            session['wynik_marza'] = f"""
-            <h3>Wyniki dla kategorii G (Sklep internetowy)</h3>
+        # Tryb nie-smart
+        if not czy_smart and kategoria not in ["G", "I"]:
+            # Obliczenia dla trybu nie-smart
+            cena_sprzedazy_z_dostawa = cena_sprzedazy_total + kwota_dostawy_smart
+            
+            if kategoria == "H" and inna_prowizja:
+                prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_z_dostawa, promowanie=False, inna_prowizja=inna_prowizja)
+            else:
+                prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_z_dostawa, promowanie=False)
+            
+            marza_min = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - kwota_dostawy_smart
+            marza_max = cena_sprzedazy_total - cena_zakupu_total - prowizja_max - kwota_dostawy_smart
+            
+            # Obliczanie sugerowanej ceny
+            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+            
+            # Wyniki dla trybu nie-smart
+            wynik_bez_promowania = f"""
+            <h3>Bez promowania (tryb nie-smart)</h3>
             <div class="wynik">
                 <table>
                     <tr>
-                        <th>Prowizja (bez dostawy)</th>
+                        <th>Marża minimalna</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_max:.2f}" style="color:var(--red-color);">
-                                {prowizja_max:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja z darmową wysyłką</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_max + koszt_wysylki:.2f}" style="color:var(--red-color);">
-                                {prowizja_max + koszt_wysylki:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża przy darmowej wysyłce</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_darmowa_wysylka:.2f}" style="color:var(--green-color);">
-                                {marza_darmowa_wysylka:.2f} zł
+                                  data-value="{marza_min:.2f}" style="color:var(--green-color);">
+                                {marza_min:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -392,155 +371,17 @@ def index():
                         <th>Marża maksymalna</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_maksymalna:.2f}" style="color:var(--green-color);">
-                                {marza_maksymalna:.2f} zł
+                                  data-value="{marza_max:.2f}" style="color:var(--green-color);">
+                                {marza_max:.2f} zł
                             </span>
                         </td>
                     </tr>
                     <tr>
-                        <th>Sugerowana cena sprzedaży</th>
+                        <th>Prowizja</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">
-                                {sugerowana_cena:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <h4>Dodatkowo dla Ceneo:</h4>
-            <div class="wynik">
-                <table>
-                    <tr>
-                        <th>Prowizja minimalna (kawa, herbata)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_min_kawa:.2f}" style="color:var(--red-color);">
-                                {prowizja_min_kawa:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża maksymalna (kawa, herbata)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_max_kawa:.2f}" style="color:var(--green-color);">
-                                {marza_max_kawa:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja akcesoria i słodycze</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_akcesoria:.2f}" style="color:var(--red-color);">
-                                {prowizja_akcesoria:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża akcesoria i słodycze</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_akcesoria:.2f}" style="color:var(--green-color);">
-                                {marza_akcesoria:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja syropy</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_syropy:.2f}" style="color:var(--red-color);">
-                                {prowizja_syropy:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża syropy</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_syropy:.2f}" style="color:var(--green-color);">
-                                {marza_syropy:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja maksymalna (małe AGD)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_max_agd:.2f}" style="color:var(--red-color);">
-                                {prowizja_max_agd:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża minimalna (małe AGD)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza_min_agd:.2f}" style="color:var(--green-color);">
-                                {marza_min_agd:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            """
-        else:
-            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
-            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
-
-            wynik_bez_promowania = f"""
-            <h3>Bez promowania</h3>
-            <div class="wynik">
-                <table>
-                    <tr>
-                        <th>Marża (dostawa minimalna)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{cena_sprzedazy - cena_zakupu - prowizja_min - dostawa_minimalna:.2f}" 
-                                  style="color:var(--green-color);">
-                                {cena_sprzedazy - cena_zakupu - prowizja_min - dostawa_minimalna:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Marża (dostawa maksymalna)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{cena_sprzedazy - cena_zakupu - prowizja_max - dostawa_maksymalna:.2f}" 
-                                  style="color:var(--green-color);">
-                                {cena_sprzedazy - cena_zakupu - prowizja_max - dostawa_maksymalna:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja czysta (bez dostawy)</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_min:.2f}" 
-                                  style="color:var(--red-color);">
+                                  data-value="{prowizja_min:.2f}" style="color:var(--red-color);">
                                 {prowizja_min:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja z dostawą minimalną</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_min + dostawa_minimalna:.2f}" 
-                                  style="color:var(--red-color);">
-                                {prowizja_min + dostawa_minimalna:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Prowizja z dostawą maksymalną</th>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{prowizja_max + dostawa_maksymalna:.2f}" 
-                                  style="color:var(--red-color);">
-                                {prowizja_max + dostawa_maksymalna:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -548,8 +389,7 @@ def index():
                         <th>Minimalna sugerowana cena (marża 2 zł)</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{sugerowana_cena_min:.2f}" 
-                                  style="color:var(--blue-color);">
+                                  data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">
                                 {sugerowana_cena_min:.2f} zł
                             </span>
                         </td>
@@ -558,8 +398,7 @@ def index():
                         <th>Sugerowana cena (marża 15%)</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{sugerowana_cena_15:.2f}" 
-                                  style="color:var(--blue-color);">
+                                  data-value="{sugerowana_cena_15:.2f}" style="color:var(--blue-color);">
                                 {sugerowana_cena_15:.2f} zł
                             </span>
                         </td>
@@ -567,23 +406,240 @@ def index():
                 </table>
             </div>
             """
+            
+            if ilosc_w_zestawie > 1:
+                wynik_bez_promowania += f"""
+                <h4>Dla jednej sztuki:</h4>
+                <div class="wynik">
+                    <table>
+                        <tr>
+                            <th>Marża minimalna</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_min / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
+                                    {marza_min / ilosc_w_zestawie:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża maksymalna</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_max / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
+                                    {marza_max / ilosc_w_zestawie:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                """
+            
+            session['wynik_marza'] = wynik_bez_promowania
 
-            if kategoria not in ["G", "I"]:
-                prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=True, inna_prowizja=inna_prowizja)
-                sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_kwota=2, promowanie=True, inna_prowizja=inna_prowizja)
-                sugerowana_cena_15_promo, _ = oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=15, promowanie=True, inna_prowizja=inna_prowizja)
+        else:
+            # Tryb smart
+            if kategoria == "G":
+                prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=False)
+                koszt_wysylki = oblicz_koszt_wysylki(cena_sprzedazy_total)
+                maksymalny_koszt = prowizja_max + koszt_wysylki
+                marza_darmowa_wysylka = cena_sprzedazy_total - cena_zakupu_total - maksymalny_koszt
+                marza_maksymalna = cena_sprzedazy_total - cena_zakupu_total - prowizja_max
+                sugerowana_cena = cena_zakupu_total / 0.84
+
+                # Nowe obliczenia dla Ceneo
+                prowizja_min_kawa = cena_sprzedazy_total * 0.06
+                marza_max_kawa = cena_sprzedazy_total - cena_zakupu_total - prowizja_min_kawa
+                prowizja_akcesoria = cena_sprzedazy_total * 0.077
+                marza_akcesoria = cena_sprzedazy_total - cena_zakupu_total - prowizja_akcesoria
+                prowizja_syropy = cena_sprzedazy_total * 0.0813
+                marza_syropy = cena_sprzedazy_total - cena_zakupu_total - prowizja_syropy
+                prowizja_max_agd = cena_sprzedazy_total * 0.0882
+                marza_min_agd = cena_sprzedazy_total - cena_zakupu_total - prowizja_max_agd
+
+                wynik_html = f"""
+                <h3>Wyniki dla kategorii G (Sklep internetowy)</h3>
+                <div class="wynik">
+                    <table>
+                        <tr>
+                            <th>Prowizja (bez dostawy)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_max:.2f}" style="color:var(--red-color);">
+                                    {prowizja_max:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja z darmową wysyłką</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_max + koszt_wysylki:.2f}" style="color:var(--red-color);">
+                                    {prowizja_max + koszt_wysylki:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża przy darmowej wysyłce</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_darmowa_wysylka:.2f}" style="color:var(--green-color);">
+                                    {marza_darmowa_wysylka:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża maksymalna</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_maksymalna:.2f}" style="color:var(--green-color);">
+                                    {marza_maksymalna:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Sugerowana cena sprzedaży</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">
+                                    {sugerowana_cena:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <h4>Dodatkowo dla Ceneo:</h4>
+                <div class="wynik">
+                    <table>
+                        <tr>
+                            <th>Prowizja minimalna (kawa, herbata)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_min_kawa:.2f}" style="color:var(--red-color);">
+                                    {prowizja_min_kawa:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża maksymalna (kawa, herbata)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_max_kawa:.2f}" style="color:var(--green-color);">
+                                    {marza_max_kawa:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja akcesoria i słodycze</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_akcesoria:.2f}" style="color:var(--red-color);">
+                                    {prowizja_akcesoria:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża akcesoria i słodycze</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_akcesoria:.2f}" style="color:var(--green-color);">
+                                    {marza_akcesoria:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja syropy</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_syropy:.2f}" style="color:var(--red-color);">
+                                    {prowizja_syropy:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża syropy</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_syropy:.2f}" style="color:var(--green-color);">
+                                    {marza_syropy:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja maksymalna (małe AGD)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_max_agd:.2f}" style="color:var(--red-color);">
+                                    {prowizja_max_agd:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Marża minimalna (małe AGD)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza_min_agd:.2f}" style="color:var(--green-color);">
+                                    {marza_min_agd:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                """
                 
-                wynik_z_promowaniem = f"""
-                <h3>Promowanie</h3>
+                if ilosc_w_zestawie > 1:
+                    wynik_html += f"""
+                    <h4>Dla jednej sztuki:</h4>
+                    <div class="wynik">
+                        <table>
+                            <tr>
+                                <th>Marża przy darmowej wysyłce</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{marza_darmowa_wysylka / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
+                                        {marza_darmowa_wysylka / ilosc_w_zestawie:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Marża maksymalna</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{marza_maksymalna / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
+                                        {marza_maksymalna / ilosc_w_zestawie:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    """
+                
+                session['wynik_marza'] = wynik_html
+
+            else:
+                if kategoria == "H" and inna_prowizja:
+                    prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=False, inna_prowizja=inna_prowizja)
+                elif kategoria == "I":
+                    prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=False, kategoria_podstawowa=kategoria_podstawowa)
+                else:
+                    prowizja_min, prowizja_max = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=False)
+
+                dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy_total)
+                dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy_total)
+
+                sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+                sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+
+                wynik_bez_promowania = f"""
+                <h3>Bez promowania</h3>
                 <div class="wynik">
                     <table>
                         <tr>
                             <th>Marża (dostawa minimalna)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_min_promo - dostawa_minimalna:.2f}" 
+                                      data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna:.2f}" 
                                       style="color:var(--green-color);">
-                                    {cena_sprzedazy - cena_zakupu - prowizja_min_promo - dostawa_minimalna:.2f} zł
+                                    {cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -591,9 +647,9 @@ def index():
                             <th>Marża (dostawa maksymalna)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f}" 
+                                      data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna:.2f}" 
                                       style="color:var(--green-color);">
-                                    {cena_sprzedazy - cena_zakupu - prowizja_max_promo - dostawa_maksymalna:.2f} zł
+                                    {cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -601,9 +657,9 @@ def index():
                             <th>Prowizja czysta (bez dostawy)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{prowizja_min_promo:.2f}" 
+                                      data-value="{prowizja_min:.2f}" 
                                       style="color:var(--red-color);">
-                                    {prowizja_min_promo:.2f} zł
+                                    {prowizja_min:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -611,9 +667,9 @@ def index():
                             <th>Prowizja z dostawą minimalną</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{prowizja_min_promo + dostawa_minimalna:.2f}" 
+                                      data-value="{prowizja_min + dostawa_minimalna:.2f}" 
                                       style="color:var(--red-color);">
-                                    {prowizja_min_promo + dostawa_minimalna:.2f} zł
+                                    {prowizja_min + dostawa_minimalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -621,9 +677,9 @@ def index():
                             <th>Prowizja z dostawą maksymalną</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{prowizja_max_promo + dostawa_maksymalna:.2f}" 
+                                      data-value="{prowizja_max + dostawa_maksymalna:.2f}" 
                                       style="color:var(--red-color);">
-                                    {prowizja_max_promo + dostawa_maksymalna:.2f} zł
+                                    {prowizja_max + dostawa_maksymalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -631,9 +687,9 @@ def index():
                             <th>Minimalna sugerowana cena (marża 2 zł)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{sugerowana_cena_min_promo:.2f}" 
+                                      data-value="{sugerowana_cena_min:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_min_promo:.2f} zł
+                                    {sugerowana_cena_min:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -641,9 +697,9 @@ def index():
                             <th>Sugerowana cena (marża 15%)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{sugerowana_cena_15_promo:.2f}" 
+                                      data-value="{sugerowana_cena_15:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_15_promo:.2f} zł
+                                    {sugerowana_cena_15:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -651,80 +707,227 @@ def index():
                 </div>
                 """
                 
-                # Tabela marż dla przewoźników (tylko bez promowania)
-                koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy)
-                tabela_przewoznikow = ""
-                for przewoznik, koszt in koszty_dostaw.items():
-                    marza = cena_sprzedazy - cena_zakupu - prowizja_min - koszt
-                    tabela_przewoznikow += f"""
-                    <tr>
-                        <td>{przewoznik}</td>
-                        <td>{koszt:.2f} zł</td>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza:.2f}" style="color:var(--green-color);">
-                                {marza:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    """
-                
-                wynik_przewoznicy = f"""
-                <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
-                <div class="wynik">
-                    <table>
-                        <thead>
+                if ilosc_w_zestawie > 1:
+                    wynik_bez_promowania += f"""
+                    <h4>Dla jednej sztuki:</h4>
+                    <div class="wynik">
+                        <table>
                             <tr>
-                                <th>Przewoźnik</th>
-                                <th>Koszt dostawy</th>
-                                <th>Marża</th>
+                                <th>Marża (dostawa minimalna)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna) / ilosc_w_zestawie:.2f}" 
+                                          style="color:var(--green-color);">
+                                        {(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna) / ilosc_w_zestawie:.2f} zł
+                                    </span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {tabela_przewoznikow}
-                        </tbody>
-                    </table>
-                </div>
-                """
-                
-                session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}<hr>{wynik_z_promowaniem}"
-            else:
-                # Tabela marż dla przewoźników dla kategorii I
-                koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy)
-                tabela_przewoznikow = ""
-                for przewoznik, koszt in koszty_dostaw.items():
-                    marza = cena_sprzedazy - cena_zakupu - prowizja_min - koszt
-                    tabela_przewoznikow += f"""
-                    <tr>
-                        <td>{przewoznik}</td>
-                        <td>{koszt:.2f} zł</td>
-                        <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{marza:.2f}" style="color:var(--green-color);">
-                                {marza:.2f} zł
-                            </span>
-                        </td>
-                    </tr>
-                    """
-                
-                wynik_przewoznicy = f"""
-                <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
-                <div class="wynik">
-                    <table>
-                        <thead>
                             <tr>
-                                <th>Przewoźnik</th>
-                                <th>Koszt dostawy</th>
-                                <th>Marża</th>
+                                <th>Marża (dostawa maksymalna)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna) / ilosc_w_zestawie:.2f}" 
+                                          style="color:var(--green-color);">
+                                        {(cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna) / ilosc_w_zestawie:.2f} zł
+                                    </span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {tabela_przewoznikow}
-                        </tbody>
-                    </table>
-                </div>
-                """
-                session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}"
+                        </table>
+                    </div>
+                    """
+
+                if kategoria not in ["G", "I"]:
+                    prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=True, inna_prowizja=inna_prowizja)
+                    sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=True, inna_prowizja=inna_prowizja)
+                    sugerowana_cena_15_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=True, inna_prowizja=inna_prowizja)
+                    
+                    wynik_z_promowaniem = f"""
+                    <h3>Promowanie</h3>
+                    <div class="wynik">
+                        <table>
+                            <tr>
+                                <th>Marża (dostawa minimalna)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna:.2f}" 
+                                          style="color:var(--green-color);">
+                                        {cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Marża (dostawa maksymalna)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna:.2f}" 
+                                          style="color:var(--green-color);">
+                                        {cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Prowizja czysta (bez dostawy)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{prowizja_min_promo:.2f}" 
+                                          style="color:var(--red-color);">
+                                        {prowizja_min_promo:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Prowizja z dostawą minimalną</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{prowizja_min_promo + dostawa_minimalna:.2f}" 
+                                          style="color:var(--red-color);">
+                                        {prowizja_min_promo + dostawa_minimalna:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Prowizja z dostawą maksymalną</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{prowizja_max_promo + dostawa_maksymalna:.2f}" 
+                                          style="color:var(--red-color);">
+                                        {prowizja_max_promo + dostawa_maksymalna:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Minimalna sugerowana cena (marża 2 zł)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{sugerowana_cena_min_promo:.2f}" 
+                                          style="color:var(--blue-color);">
+                                        {sugerowana_cena_min_promo:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Sugerowana cena (marża 15%)</th>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{sugerowana_cena_15_promo:.2f}" 
+                                          style="color:var(--blue-color);">
+                                        {sugerowana_cena_15_promo:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    """
+                    
+                    if ilosc_w_zestawie > 1:
+                        wynik_z_promowaniem += f"""
+                        <h4>Dla jednej sztuki:</h4>
+                        <div class="wynik">
+                            <table>
+                                <tr>
+                                    <th>Marża (dostawa minimalna)</th>
+                                    <td>
+                                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                              data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna) / ilosc_w_zestawie:.2f}" 
+                                              style="color:var(--green-color);">
+                                            {(cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna) / ilosc_w_zestawie:.2f} zł
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Marża (dostawa maksymalna)</th>
+                                    <td>
+                                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                              data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna) / ilosc_w_zestawie:.2f}" 
+                                              style="color:var(--green-color);">
+                                            {(cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna) / ilosc_w_zestawie:.2f} zł
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        """
+                    
+                    # Tabela marż dla przewoźników (tylko bez promowania)
+                    if czy_smart:
+                        koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy_total)
+                        tabela_przewoznikow = ""
+                        for przewoznik, koszt in koszty_dostaw.items():
+                            marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
+                            tabela_przewoznikow += f"""
+                            <tr>
+                                <td>{przewoznik}</td>
+                                <td>{koszt:.2f} zł</td>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{marza:.2f}" style="color:var(--green-color);">
+                                        {marza:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            """
+                        
+                        wynik_przewoznicy = f"""
+                        <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
+                        <div class="wynik">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Przewoźnik</th>
+                                        <th>Koszt dostawy</th>
+                                        <th>Marża</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tabela_przewoznikow}
+                                </tbody>
+                            </table>
+                        </div>
+                        """
+                        
+                        session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}<hr>{wynik_z_promowaniem}"
+                    else:
+                        session['wynik_marza'] = f"{wynik_bez_promowania}<hr>{wynik_z_promowaniem}"
+                else:
+                    # Tabela marż dla przewoźników dla kategorii I
+                    if czy_smart:
+                        koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy_total)
+                        tabela_przewoznikow = ""
+                        for przewoznik, koszt in koszty_dostaw.items():
+                            marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
+                            tabela_przewoznikow += f"""
+                            <tr>
+                                <td>{przewoznik}</td>
+                                <td>{koszt:.2f} zł</td>
+                                <td>
+                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                          data-value="{marza:.2f}" style="color:var(--green-color);">
+                                        {marza:.2f} zł
+                                    </span>
+                                </td>
+                            </tr>
+                            """
+                        
+                        wynik_przewoznicy = f"""
+                        <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
+                        <div class="wynik">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Przewoźnik</th>
+                                        <th>Koszt dostawy</th>
+                                        <th>Marża</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tabela_przewoznikow}
+                                </tbody>
+                            </table>
+                        </div>
+                        """
+                        session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}"
+                    else:
+                        session['wynik_marza'] = wynik_bez_promowania
 
     if form_vat.submit.data and form_vat.validate():
         cena_netto = zamien_przecinek_na_kropke(form_vat.cena_netto.data)
