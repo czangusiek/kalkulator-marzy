@@ -18,6 +18,7 @@
             --red-color: #ff0000;
             --green-color: #008000;
             --blue-color: #0000ff;
+            --orange-color: #ffa500;
         }
 
         .dark-mode {
@@ -31,6 +32,7 @@
             --red-color: #ff6b6b;
             --green-color: #6bff6b;
             --blue-color: #6b6bff;
+            --orange-color: #ffb74d;
         }
 
         body {
@@ -387,6 +389,12 @@
                         {{ form_marza.marza_procent(size=20) }}
                         <br>
                     </div>
+
+                    <div class="koszt-pakowania">
+                        <label for="koszt_pakowania">Koszt pakowania (zł):</label>
+                        {{ form_marza.koszt_pakowania(size=20) }}
+                        <br>
+                    </div>
                 </div>
                 <br>
                 {{ form_marza.submit() }}
@@ -405,6 +413,9 @@
                     <strong>{{ wpis.timestamp }}</strong><br>
                     Zakup: {{ wpis.cena_zakupu }} zł | Sprzedaż: {{ wpis.cena_sprzedazy }} zł | 
                     Kategoria: {{ wpis.kategoria }} | Smart: {{ 'Tak' if wpis.czy_smart else 'Nie' }}
+                    {% if wpis.koszt_pakowania > 0 %}
+                    | Pakowanie: {{ wpis.koszt_pakowania }} zł
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -649,11 +660,11 @@
             const colors = isDarkMode ? {
                 bg: '#121212', text: '#e0e0e0', tableHeader: '#1e1e1e',
                 tableBorder: '#444', containerBg: '#1a1a1a', containerBorder: '#555',
-                hr: '#555', red: '#ff6b6b', green: '#6bff6b', blue: '#6b6bff'
+                hr: '#555', red: '#ff6b6b', green: '#6bff6b', blue: '#6b6bff', orange: '#ffb74d'
             } : {
                 bg: '#ffffff', text: '#333333', tableHeader: '#f2f2f2',
                 tableBorder: '#ddd', containerBg: '#f9f9f9', containerBorder: '#ccc',
-                hr: '#ccc', red: '#ff0000', green: '#008000', blue: '#0000ff'
+                hr: '#ccc', red: '#ff0000', green: '#008000', blue: '#0000ff', orange: '#ffa500'
             };
 
             document.documentElement.style.setProperty('--bg-color', colors.bg);
@@ -666,6 +677,7 @@
             document.documentElement.style.setProperty('--red-color', colors.red);
             document.documentElement.style.setProperty('--green-color', colors.green);
             document.documentElement.style.setProperty('--blue-color', colors.blue);
+            document.documentElement.style.setProperty('--orange-color', colors.orange);
             
             document.documentElement.style.setProperty('--dark-mode-invert', isDarkMode ? '1' : '0');
         }
@@ -710,6 +722,7 @@
                 document.querySelector('input[name="czy_smart"]').checked = wpis.czy_smart;
                 document.getElementById('marza_kwota').value = wpis.marza_kwota;
                 document.getElementById('marza_procent').value = wpis.marza_procent;
+                document.getElementById('koszt_pakowania').value = wpis.koszt_pakowania || 0;
                 
                 // Przełącz widoczność dodatkowych opcji
                 toggleInnaProwizja();
@@ -721,6 +734,7 @@
             const cenaZakupu = parseFloat(document.getElementById('cena_zakupu').value) || 0;
             const kategoria = document.getElementById('kategoria').value;
             const czySmart = document.querySelector('input[name="czy_smart"]').checked;
+            const kosztPakowania = parseFloat(document.getElementById('koszt_pakowania').value) || 0;
             
             if (cenaZakupu <= 0) return;
 
@@ -737,11 +751,11 @@
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cena, false);
                     const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cena);
-                    const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cena - cenaZakupu - prowizjaMin - koszt);
+                    const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cena - cenaZakupu - prowizjaMin - koszt - kosztPakowania);
                     marza = Math.min(...marzePrzewoznicy); // Najmniejsza marża
                 } else {
                     const prowizja = obliczProwizje(kategoria, cena, false);
-                    marza = cena - cenaZakupu - prowizja;
+                    marza = cena - cenaZakupu - prowizja - kosztPakowania;
                 }
                 
                 marze.push(marza);
@@ -757,7 +771,7 @@
             window.marzaChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: cenySprzedazy.map(c => c.toFixed(2) + ' zł'),
+                    labels: cenySprzedazy.map(c => c.toFixed(0) + ' zł'),
                     datasets: [{
                         label: 'Marża (zł)',
                         data: marze,
@@ -777,7 +791,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`;
+                                    return `Marża: ${context.parsed.y.toFixed(0)} zł`;
                                 }
                             }
                         }
@@ -887,6 +901,7 @@
             document.getElementById('cena_zakupu').addEventListener('input', generujWykresMarzy);
             document.getElementById('kategoria').addEventListener('change', generujWykresMarzy);
             document.querySelector('input[name="czy_smart"]').addEventListener('change', generujWykresMarzy);
+            document.getElementById('koszt_pakowania').addEventListener('input', generujWykresMarzy);
 
             // Generuj początkowy wykres jeśli mamy dane
             setTimeout(generujWykresMarzy, 1000);
