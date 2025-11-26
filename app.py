@@ -292,7 +292,7 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         sugerowana_cena /= (1 - marza_procent / 100)
 
     for _ in range(10):
-        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawowa)
+        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawaya)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
         
@@ -319,6 +319,10 @@ def index():
         
     form_marza = KalkulatorMarzyForm()
     form_vat = KalkulatorVATForm()
+
+    # Ustaw domyślną wartość dla checkboxa "Czy smart?" na True
+    if not form_marza.czy_smart.data:
+        form_marza.czy_smart.data = True
 
     if form_marza.submit.data and form_marza.validate():
         cena_zakupu = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
