@@ -413,8 +413,8 @@
                     <strong>{{ wpis.timestamp }}</strong><br>
                     Zakup: {{ wpis.cena_zakupu }} zł | Sprzedaż: {{ wpis.cena_sprzedazy }} zł | 
                     Kategoria: {{ wpis.kategoria }} | Smart: {{ 'Tak' if wpis.czy_smart else 'Nie' }}
-                    {% if wpis.koszt_pakowania > 0 %}
-                    | Pakowanie: {{ wpis.koszt_pakowania }} zł
+                    {% if wpis.get('koszt_pakowania', 0) > 0 %}
+                    | Pakowanie: {{ wpis.get('koszt_pakowania', 0) }} zł
                     {% endif %}
                 </div>
                 {% endfor %}

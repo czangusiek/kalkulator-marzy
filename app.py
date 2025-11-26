@@ -332,6 +332,11 @@ def index():
     if 'historia_marz' not in session:
         session['historia_marz'] = []
 
+    # Napraw historię - dodaj brakujące pola do starych wpisów
+    for wpis in session['historia_marz']:
+        if 'koszt_pakowania' not in wpis:
+            wpis['koszt_pakowania'] = 0
+
     if form_marza.submit.data and form_marza.validate():
         cena_zakupu = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
         cena_sprzedazy = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
