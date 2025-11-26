@@ -6,6 +6,7 @@ from wtforms.validators import DataRequired, Optional, NumberRange
 from datetime import datetime, timedelta
 import requests
 import difflib
+import json
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
@@ -91,6 +92,8 @@ class KalkulatorMarzyForm(FlaskForm):
     ilosc_w_zestawie = StringField('Ilość w zestawie:', default="1", validators=[DataRequired()])
     czy_smart = BooleanField('Czy smart?', default=True)
     kwota_dostawy_smart = StringField('Kwota dostawy:', default="0")
+    marza_kwota = StringField('Marża minimalna (zł):', default="2")
+    marza_procent = StringField('Marża procentowa (%):', default="15")
     submit = SubmitField('Oblicz')
 
 class KalkulatorVATForm(FlaskForm):
@@ -292,7 +295,7 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         sugerowana_cena /= (1 - marza_procent / 100)
 
     for _ in range(10):
-        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawaya)
+        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawowa)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
         
@@ -324,6 +327,10 @@ def index():
     if not form_marza.czy_smart.data:
         form_marza.czy_smart.data = True
 
+    # Inicjalizacja historii w sesji
+    if 'historia_marz' not in session:
+        session['historia_marz'] = []
+
     if form_marza.submit.data and form_marza.validate():
         cena_zakupu = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
         cena_sprzedazy = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
@@ -333,6 +340,8 @@ def index():
         ilosc_w_zestawie = zamien_przecinek_na_kropke(form_marza.ilosc_w_zestawie.data)
         czy_smart = form_marza.czy_smart.data
         kwota_dostawy_smart = zamien_przecinek_na_kropke(form_marza.kwota_dostawy_smart.data) if form_marza.kwota_dostawy_smart.data else 0
+        marza_kwota = zamien_przecinek_na_kropke(form_marza.marza_kwota.data) if form_marza.marza_kwota.data else 2
+        marza_procent = zamien_przecinek_na_kropke(form_marza.marza_procent.data) if form_marza.marza_procent.data else 15
 
         cena_zakupu_total = cena_zakupu * ilosc_w_zestawie
         cena_sprzedazy_total = cena_sprzedazy * ilosc_w_zestawie
@@ -354,8 +363,8 @@ def index():
             marza_max = cena_sprzedazy_total - cena_zakupu_total - prowizja_max - kwota_dostawy_smart
             
             # Obliczanie sugerowanej ceny
-            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
-            sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+            sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=marza_kwota, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+            sugerowana_cena_procent, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=marza_procent, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
             
             # Wyniki dla trybu nie-smart
             wynik_bez_promowania = f"""
@@ -390,7 +399,7 @@ def index():
                         </td>
                     </tr>
                     <tr>
-                        <th>Minimalna sugerowana cena (marża 2 zł)</th>
+                        <th>Minimalna sugerowana cena (marża {marza_kwota:.2f} zł)</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">
@@ -399,11 +408,11 @@ def index():
                         </td>
                     </tr>
                     <tr>
-                        <th>Sugerowana cena (marża 15%)</th>
+                        <th>Sugerowana cena (marża {marza_procent:.1f}%)</th>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{sugerowana_cena_15:.2f}" style="color:var(--blue-color);">
-                                {sugerowana_cena_15:.2f} zł
+                                  data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">
+                                {sugerowana_cena_procent:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -630,31 +639,32 @@ def index():
                 dostawa_minimalna = oblicz_dostawe_minimalna(cena_sprzedazy_total)
                 dostawa_maksymalna = oblicz_dostawe_maksymalna(cena_sprzedazy_total)
 
-                sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
-                sugerowana_cena_15, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+                sugerowana_cena_min, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=marza_kwota, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+                sugerowana_cena_procent, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=marza_procent, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
+
+                # Oblicz przedział marż dla wszystkich przewoźników
+                koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy_total)
+                marze_przewoznicy = []
+                for przewoznik, koszt in koszty_dostaw.items():
+                    marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
+                    marze_przewoznicy.append(marza)
+                
+                marza_min_przewoznicy = min(marze_przewoznicy)
+                marza_max_przewoznicy = max(marze_przewoznicy)
 
                 wynik_bez_promowania = f"""
                 <h3>Bez promowania</h3>
                 <div class="wynik">
                     <table>
                         <tr>
-                            <th>Marża (dostawa minimalna)</th>
+                            <th>Marża (przedział dla przewoźników)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna:.2f}" 
+                                      data-value="{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f}" 
                                       style="color:var(--green-color);">
-                                    {cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna:.2f} zł
+                                    {marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f} zł
                                 </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Marża (dostawa maksymalna)</th>
-                            <td>
-                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna:.2f}" 
-                                      style="color:var(--green-color);">
-                                    {cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna:.2f} zł
-                                </span>
+                                <button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-bez-promowania')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button>
                             </td>
                         </tr>
                         <tr>
@@ -688,7 +698,7 @@ def index():
                             </td>
                         </tr>
                         <tr>
-                            <th>Minimalna sugerowana cena (marża 2 zł)</th>
+                            <th>Minimalna sugerowana cena (marża {marza_kwota:.2f} zł)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{sugerowana_cena_min:.2f}" 
@@ -698,16 +708,53 @@ def index():
                             </td>
                         </tr>
                         <tr>
-                            <th>Sugerowana cena (marża 15%)</th>
+                            <th>Sugerowana cena (marża {marza_procent:.1f}%)</th>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                      data-value="{sugerowana_cena_15:.2f}" 
+                                      data-value="{sugerowana_cena_procent:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_15:.2f} zł
+                                    {sugerowana_cena_procent:.2f} zł
                                 </span>
                             </td>
                         </tr>
                     </table>
+                </div>
+                """
+                
+                # Tabela przewoźników dla trybu bez promowania
+                tabela_przewoznikow = ""
+                for przewoznik, koszt in koszty_dostaw.items():
+                    marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
+                    tabela_przewoznikow += f"""
+                    <tr>
+                        <td>{przewoznik}</td>
+                        <td>{koszt:.2f} zł</td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{marza:.2f}" style="color:var(--green-color);">
+                                {marza:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    """
+                
+                wynik_przewoznicy = f"""
+                <div id="tabela-przewoznicy-bez-promowania" class="rozwijana-tabela" style="display: none;">
+                    <h4>Szczegóły marż dla przewoźników (bez promowania)</h4>
+                    <div class="wynik">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Przewoźnik</th>
+                                    <th>Koszt dostawy</th>
+                                    <th>Marża</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tabela_przewoznikow}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 """
                 
@@ -717,22 +764,12 @@ def index():
                     <div class="wynik">
                         <table>
                             <tr>
-                                <th>Marża (dostawa minimalna)</th>
+                                <th>Marża (przedział dla przewoźników)</th>
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna) / ilosc_w_zestawie:.2f}" 
+                                          data-value="{marza_min_przewoznicy / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy / ilosc_w_zestawie:.2f}" 
                                           style="color:var(--green-color);">
-                                        {(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - dostawa_minimalna) / ilosc_w_zestawie:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Marża (dostawa maksymalna)</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna) / ilosc_w_zestawie:.2f}" 
-                                          style="color:var(--green-color);">
-                                        {(cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna) / ilosc_w_zestawie:.2f} zł
+                                        {marza_min_przewoznicy / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy / ilosc_w_zestawie:.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -742,31 +779,31 @@ def index():
 
                 if kategoria not in ["G", "I"]:
                     prowizja_min_promo, prowizja_max_promo = oblicz_prowizje(kategoria, cena_sprzedazy_total, promowanie=True, inna_prowizja=inna_prowizja)
-                    sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=2, promowanie=True, inna_prowizja=inna_prowizja)
-                    sugerowana_cena_15_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=15, promowanie=True, inna_prowizja=inna_prowizja)
+                    sugerowana_cena_min_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_kwota=marza_kwota, promowanie=True, inna_prowizja=inna_prowizja)
+                    sugerowana_cena_procent_promo, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=marza_procent, promowanie=True, inna_prowizja=inna_prowizja)
+                    
+                    # Oblicz przedział marż dla wszystkich przewoźników z promowaniem
+                    marze_przewoznicy_promo = []
+                    for przewoznik, koszt in koszty_dostaw.items():
+                        marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - koszt
+                        marze_przewoznicy_promo.append(marza)
+                    
+                    marza_min_przewoznicy_promo = min(marze_przewoznicy_promo)
+                    marza_max_przewoznicy_promo = max(marze_przewoznicy_promo)
                     
                     wynik_z_promowaniem = f"""
                     <h3>Promowanie</h3>
                     <div class="wynik">
                         <table>
                             <tr>
-                                <th>Marża (dostawa minimalna)</th>
+                                <th>Marża (przedział dla przewoźników)</th>
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna:.2f}" 
+                                          data-value="{marza_min_przewoznicy_promo:.2f} - {marza_max_przewoznicy_promo:.2f}" 
                                           style="color:var(--green-color);">
-                                        {cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna:.2f} zł
+                                        {marza_min_przewoznicy_promo:.2f} - {marza_max_przewoznicy_promo:.2f} zł
                                     </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Marża (dostawa maksymalna)</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna:.2f}" 
-                                          style="color:var(--green-color);">
-                                        {cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna:.2f} zł
-                                    </span>
+                                    <button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-z-promowaniem')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button>
                                 </td>
                             </tr>
                             <tr>
@@ -800,7 +837,7 @@ def index():
                                 </td>
                             </tr>
                             <tr>
-                                <th>Minimalna sugerowana cena (marża 2 zł)</th>
+                                <th>Minimalna sugerowana cena (marża {marza_kwota:.2f} zł)</th>
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{sugerowana_cena_min_promo:.2f}" 
@@ -810,16 +847,53 @@ def index():
                                 </td>
                             </tr>
                             <tr>
-                                <th>Sugerowana cena (marża 15%)</th>
+                                <th>Sugerowana cena (marża {marza_procent:.1f}%)</th>
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{sugerowana_cena_15_promo:.2f}" 
+                                          data-value="{sugerowana_cena_procent_promo:.2f}" 
                                           style="color:var(--blue-color);">
-                                        {sugerowana_cena_15_promo:.2f} zł
+                                        {sugerowana_cena_procent_promo:.2f} zł
                                     </span>
                                 </td>
                             </tr>
                         </table>
+                    </div>
+                    """
+                    
+                    # Tabela przewoźników dla trybu z promowaniem
+                    tabela_przewoznikow_promo = ""
+                    for przewoznik, koszt in koszty_dostaw.items():
+                        marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - koszt
+                        tabela_przewoznikow_promo += f"""
+                        <tr>
+                            <td>{przewoznik}</td>
+                            <td>{koszt:.2f} zł</td>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{marza:.2f}" style="color:var(--green-color);">
+                                    {marza:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        """
+                    
+                    wynik_przewoznicy_promo = f"""
+                    <div id="tabela-przewoznicy-z-promowaniem" class="rozwijana-tabela" style="display: none;">
+                        <h4>Szczegóły marż dla przewoźników (z promowaniem)</h4>
+                        <div class="wynik">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Przewoźnik</th>
+                                        <th>Koszt dostawy</th>
+                                        <th>Marża</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tabela_przewoznikow_promo}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     """
                     
@@ -829,22 +903,12 @@ def index():
                         <div class="wynik">
                             <table>
                                 <tr>
-                                    <th>Marża (dostawa minimalna)</th>
+                                    <th>Marża (przedział dla przewoźników)</th>
                                     <td>
                                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                              data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna) / ilosc_w_zestawie:.2f}" 
+                                              data-value="{marza_min_przewoznicy_promo / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy_promo / ilosc_w_zestawie:.2f}" 
                                               style="color:var(--green-color);">
-                                            {(cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - dostawa_minimalna) / ilosc_w_zestawie:.2f} zł
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Marża (dostawa maksymalna)</th>
-                                    <td>
-                                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                              data-value="{(cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna) / ilosc_w_zestawie:.2f}" 
-                                              style="color:var(--green-color);">
-                                            {(cena_sprzedazy_total - cena_zakupu_total - prowizja_max_promo - dostawa_maksymalna) / ilosc_w_zestawie:.2f} zł
+                                            {marza_min_przewoznicy_promo / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy_promo / ilosc_w_zestawie:.2f} zł
                                         </span>
                                     </td>
                                 </tr>
@@ -852,86 +916,24 @@ def index():
                         </div>
                         """
                     
-                    # Tabela marż dla przewoźników (tylko bez promowania)
-                    if czy_smart:
-                        koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy_total)
-                        tabela_przewoznikow = ""
-                        for przewoznik, koszt in koszty_dostaw.items():
-                            marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
-                            tabela_przewoznikow += f"""
-                            <tr>
-                                <td>{przewoznik}</td>
-                                <td>{koszt:.2f} zł</td>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{marza:.2f}" style="color:var(--green-color);">
-                                        {marza:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            """
-                        
-                        wynik_przewoznicy = f"""
-                        <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
-                        <div class="wynik">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Przewoźnik</th>
-                                        <th>Koszt dostawy</th>
-                                        <th>Marża</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tabela_przewoznikow}
-                                </tbody>
-                            </table>
-                        </div>
-                        """
-                        
-                        session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}<hr>{wynik_z_promowaniem}"
-                    else:
-                        session['wynik_marza'] = f"{wynik_bez_promowania}<hr>{wynik_z_promowaniem}"
+                    session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}<hr>{wynik_z_promowaniem}{wynik_przewoznicy_promo}"
                 else:
-                    # Tabela marż dla przewoźników dla kategorii I
-                    if czy_smart:
-                        koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy_total)
-                        tabela_przewoznikow = ""
-                        for przewoznik, koszt in koszty_dostaw.items():
-                            marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min - koszt
-                            tabela_przewoznikow += f"""
-                            <tr>
-                                <td>{przewoznik}</td>
-                                <td>{koszt:.2f} zł</td>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{marza:.2f}" style="color:var(--green-color);">
-                                        {marza:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            """
-                        
-                        wynik_przewoznicy = f"""
-                        <h4>Marża dla poszczególnych przewoźników (bez promowania)</h4>
-                        <div class="wynik">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Przewoźnik</th>
-                                        <th>Koszt dostawy</th>
-                                        <th>Marża</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tabela_przewoznikow}
-                                </tbody>
-                            </table>
-                        </div>
-                        """
-                        session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}"
-                    else:
-                        session['wynik_marza'] = wynik_bez_promowania
+                    session['wynik_marza'] = f"{wynik_bez_promowania}{wynik_przewoznicy}"
+
+        # Dodaj do historii
+        historia_wpis = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'cena_zakupu': cena_zakupu,
+            'cena_sprzedazy': cena_sprzedazy,
+            'kategoria': kategoria,
+            'marza_kwota': marza_kwota,
+            'marza_procent': marza_procent,
+            'czy_smart': czy_smart
+        }
+        session['historia_marz'].insert(0, historia_wpis)
+        # Zachowaj tylko ostatnie 10 wpisów
+        session['historia_marz'] = session['historia_marz'][:10]
+        session.modified = True
 
     if form_vat.submit.data and form_vat.validate():
         cena_netto = zamien_przecinek_na_kropke(form_vat.cena_netto.data)
@@ -1076,7 +1078,8 @@ def index():
         form_marza=form_marza,
         form_vat=form_vat,
         wynik_marza=session.get('wynik_marza'),
-        wynik_vat=session.get('wynik_vat')
+        wynik_vat=session.get('wynik_vat'),
+        historia_marz=session.get('historia_marz', [])
     )
 
 @app.route("/licznik", methods=["GET", "POST"])

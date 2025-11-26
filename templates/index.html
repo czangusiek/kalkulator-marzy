@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalkulator marży i VAT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -230,6 +231,93 @@
             display: none;
         }
 
+        .wiecej-opcji {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
+
+        .toggle-wiecej-opcji {
+            background: none;
+            border: 1px solid var(--table-border);
+            color: var(--text-color);
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 10px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .toggle-wiecej-opcji:hover {
+            background-color: var(--table-header-bg);
+        }
+
+        .toggle-wiecej-opcji::after {
+            content: "▶";
+            float: right;
+            transition: transform 0.3s;
+        }
+
+        .toggle-wiecej-opcji.otwarty::after {
+            transform: rotate(90deg);
+        }
+
+        .rozwijana-tabela {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
+
+        .toggle-tabela {
+            background: none;
+            border: 1px solid var(--table-border);
+            color: var(--text-color);
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .toggle-tabela:hover {
+            background-color: var(--table-header-bg);
+        }
+
+        .historia {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
+
+        .historia-wpis {
+            padding: 8px;
+            border-bottom: 1px solid var(--table-border);
+            cursor: pointer;
+        }
+
+        .historia-wpis:hover {
+            background-color: var(--table-header-bg);
+        }
+
+        .historia-wpis:last-child {
+            border-bottom: none;
+        }
+
+        .wykres-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -263,28 +351,42 @@
                 <label for="kategoria">Kategoria:</label>
                 {{ form_marza.kategoria(onchange="toggleInnaProwizja()") }}
                 <br>
-                <div id="inna-prowizja-div" class="inna-prowizja">
-                    <label for="inna_prowizja">Procent prowizji:</label>
-                    {{ form_marza.inna_prowizja(size=20) }}
-                    <br>
-                </div>
-                <div id="kategoria-podstawowa-div" class="kategoria-podstawowa">
-                    <label for="kategoria_podstawowa">Kategoria podstawowa:</label>
-                    {{ form_marza.kategoria_podstawowa(size=1) }}
-                    <br>
-                </div>
                 <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
                 <br>
-                <div id="czy-smart-div">
+
+                <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji()">▼ Więcej opcji</button>
+                
+                <div id="wiecej-opcji" class="wiecej-opcji">
+                    <div id="inna-prowizja-div" class="inna-prowizja">
+                        <label for="inna_prowizja">Procent prowizji:</label>
+                        {{ form_marza.inna_prowizja(size=20) }}
+                        <br>
+                    </div>
+                    <div id="kategoria-podstawowa-div" class="kategoria-podstawowa">
+                        <label for="kategoria_podstawowa">Kategoria podstawowa:</label>
+                        {{ form_marza.kategoria_podstawowa(size=1) }}
+                        <br>
+                    </div>
+                    
                     <label>
                         {{ form_marza.czy_smart(onchange="toggleTrybSmart()") }} Czy smart?
                     </label>
-                </div>
-                <div id="tryb-nie-smart-div" class="tryb-nie-smart">
-                    <label for="kwota_dostawy_smart">Kwota dostawy:</label>
-                    {{ form_marza.kwota_dostawy_smart(size=20) }}
-                    <br>
+                    
+                    <div id="tryb-nie-smart-div" class="tryb-nie-smart">
+                        <label for="kwota_dostawy_smart">Kwota dostawy:</label>
+                        {{ form_marza.kwota_dostawy_smart(size=20) }}
+                        <br>
+                    </div>
+
+                    <div class="marze-ustawienia">
+                        <label for="marza_kwota">Marża minimalna (zł):</label>
+                        {{ form_marza.marza_kwota(size=20) }}
+                        <br>
+                        <label for="marza_procent">Marża procentowa (%):</label>
+                        {{ form_marza.marza_procent(size=20) }}
+                        <br>
+                    </div>
                 </div>
                 <br>
                 {{ form_marza.submit() }}
@@ -294,6 +396,24 @@
             <h2>Wynik:</h2>
             <div class="wynik">{{ wynik_marza | safe }}</div>
             {% endif %}
+
+            {% if historia_marz %}
+            <div class="historia">
+                <h3>Historia obliczeń</h3>
+                {% for wpis in historia_marz %}
+                <div class="historia-wpis" onclick="wczytajZHistorii({{ loop.index0 }})">
+                    <strong>{{ wpis.timestamp }}</strong><br>
+                    Zakup: {{ wpis.cena_zakupu }} zł | Sprzedaż: {{ wpis.cena_sprzedazy }} zł | 
+                    Kategoria: {{ wpis.kategoria }} | Smart: {{ 'Tak' if wpis.czy_smart else 'Nie' }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="wykres-container">
+                <h3>Wykres marży w zależności od ceny sprzedaży</h3>
+                <canvas id="wykresMarzy" width="400" height="200"></canvas>
+            </div>
         </div>
 
         <div class="kalkulator">
@@ -398,34 +518,22 @@
     <script>
         let lastWalutaTowar = null;
         let lastWalutaDostawa = null;
+        let historiaDanych = {{ historia_marz | tojson | safe }};
 
         function toggleInnaProwizja() {
             const kategoria = document.getElementById("kategoria").value;
             const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
             const kategoriaPodstawowaDiv = document.getElementById("kategoria-podstawowa-div");
-            const czySmartDiv = document.getElementById("czy-smart-div");
-            const trybNieSmartDiv = document.getElementById("tryb-nie-smart-div");
             
             if (kategoria === "H") {
                 innaProwizjaDiv.style.display = "block";
                 kategoriaPodstawowaDiv.style.display = "none";
-                czySmartDiv.style.display = "block";
-                trybNieSmartDiv.style.display = "none";
             } else if (kategoria === "I") {
                 innaProwizjaDiv.style.display = "none";
                 kategoriaPodstawowaDiv.style.display = "block";
-                czySmartDiv.style.display = "none";
-                trybNieSmartDiv.style.display = "none";
-            } else if (kategoria === "G") {
-                innaProwizjaDiv.style.display = "none";
-                kategoriaPodstawowaDiv.style.display = "none";
-                czySmartDiv.style.display = "none";
-                trybNieSmartDiv.style.display = "none";
             } else {
                 innaProwizjaDiv.style.display = "none";
                 kategoriaPodstawowaDiv.style.display = "none";
-                czySmartDiv.style.display = "block";
-                trybNieSmartDiv.style.display = "none";
             }
         }
 
@@ -437,6 +545,34 @@
                 trybNieSmartDiv.style.display = "block";
             } else {
                 trybNieSmartDiv.style.display = "none";
+            }
+        }
+
+        function toggleWiecejOpcji() {
+            const wiecejOpcji = document.getElementById("wiecej-opcji");
+            const przycisk = document.querySelector('.toggle-wiecej-opcji');
+            
+            if (wiecejOpcji.style.display === "none" || wiecejOpcji.style.display === "") {
+                wiecejOpcji.style.display = "block";
+                przycisk.classList.add('otwarty');
+                przycisk.innerHTML = '▲ Więcej opcji';
+            } else {
+                wiecejOpcji.style.display = "none";
+                przycisk.classList.remove('otwarty');
+                przycisk.innerHTML = '▼ Więcej opcji';
+            }
+        }
+
+        function toggleTabela(id) {
+            const tabela = document.getElementById(id);
+            const przycisk = event.target;
+            
+            if (tabela.style.display === "none" || tabela.style.display === "") {
+                tabela.style.display = "block";
+                przycisk.textContent = "ukryj szczegóły";
+            } else {
+                tabela.style.display = "none";
+                przycisk.textContent = "pokaż szczegóły";
             }
         }
 
@@ -565,6 +701,138 @@
             document.body.removeChild(textarea);
         }
 
+        function wczytajZHistorii(index) {
+            const wpis = historiaDanych[index];
+            if (wpis) {
+                document.getElementById('cena_zakupu').value = wpis.cena_zakupu;
+                document.getElementById('cena_sprzedazy').value = wpis.cena_sprzedazy;
+                document.getElementById('kategoria').value = wpis.kategoria;
+                document.querySelector('input[name="czy_smart"]').checked = wpis.czy_smart;
+                document.getElementById('marza_kwota').value = wpis.marza_kwota;
+                document.getElementById('marza_procent').value = wpis.marza_procent;
+                
+                // Przełącz widoczność dodatkowych opcji
+                toggleInnaProwizja();
+                toggleTrybSmart();
+            }
+        }
+
+        function generujWykresMarzy() {
+            const cenaZakupu = parseFloat(document.getElementById('cena_zakupu').value) || 0;
+            const kategoria = document.getElementById('kategoria').value;
+            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
+            
+            if (cenaZakupu <= 0) return;
+
+            const cenySprzedazy = [];
+            const marze = [];
+            
+            // Generuj ceny sprzedaży od ceny zakupu do 3x ceny zakupu
+            const krok = cenaZakupu * 0.1; // 10% kroki
+            for (let cena = cenaZakupu; cena <= cenaZakupu * 3; cena += krok) {
+                cenySprzedazy.push(cena);
+                
+                // Oblicz marżę dla danej ceny
+                let marza = 0;
+                if (czySmart && kategoria !== "G" && kategoria !== "I") {
+                    const prowizjaMin = obliczProwizje(kategoria, cena, false);
+                    const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cena);
+                    const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cena - cenaZakupu - prowizjaMin - koszt);
+                    marza = Math.min(...marzePrzewoznicy); // Najmniejsza marża
+                } else {
+                    const prowizja = obliczProwizje(kategoria, cena, false);
+                    marza = cena - cenaZakupu - prowizja;
+                }
+                
+                marze.push(marza);
+            }
+
+            const ctx = document.getElementById('wykresMarzy').getContext('2d');
+            
+            // Zniszcz poprzedni wykres jeśli istnieje
+            if (window.marzaChart) {
+                window.marzaChart.destroy();
+            }
+
+            window.marzaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: cenySprzedazy.map(c => c.toFixed(2) + ' zł'),
+                    datasets: [{
+                        label: 'Marża (zł)',
+                        data: marze,
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Marża w zależności od ceny sprzedaży'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Cena sprzedaży (zł)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Marża (zł)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Uproszczone funkcje do obliczeń na frontendzie dla wykresu
+        function obliczProwizje(kategoria, cena, promowanie) {
+            let prowizja = 0;
+            switch(kategoria) {
+                case "A": prowizja = cena * 0.0615; break;
+                case "B": prowizja = cena * 0.1292; break;
+                case "C": prowizja = cena * 0.1292; break;
+                case "D": prowizja = cena * 0.1353; break;
+                case "E": prowizja = cena * 0.0555; break;
+                case "F": 
+                    prowizja = cena <= 60 ? cena * 0.1845 : 11.07 + (cena - 60) * 0.0984;
+                    break;
+                case "G": prowizja = cena * 0.01; break;
+                default: prowizja = cena * 0.1; // domyślna
+            }
+            
+            if (promowanie && kategoria !== "G" && kategoria !== "I") {
+                prowizja *= 1.75;
+            }
+            
+            return prowizja;
+        }
+
+        function obliczKosztDostawyDlaPrzewoznika(cena) {
+            if (cena < 30) return { 'Przewoźnik': 0 };
+            if (cena < 45) return { 'Przewoźnik': 1.59 };
+            if (cena < 65) return { 'Przewoźnik': 3.09 };
+            if (cena < 100) return { 'Przewoźnik': 4.99 };
+            if (cena < 150) return { 'Przewoźnik': 7.59 };
+            return { 'Przewoźnik': 9.99 };
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
             document.body.classList.toggle('dark-mode', darkMode);
@@ -614,6 +882,14 @@
                     sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
                 }
             });
+
+            // Generuj wykres przy zmianie ceny zakupu
+            document.getElementById('cena_zakupu').addEventListener('input', generujWykresMarzy);
+            document.getElementById('kategoria').addEventListener('change', generujWykresMarzy);
+            document.querySelector('input[name="czy_smart"]').addEventListener('change', generujWykresMarzy);
+
+            // Generuj początkowy wykres jeśli mamy dane
+            setTimeout(generujWykresMarzy, 1000);
         });
     </script>
 </body>
