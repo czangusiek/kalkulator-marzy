@@ -383,7 +383,7 @@ def index():
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{marza_min:.2f}" style="color:var(--green-color);">
-                                {marza_min:.0f} zł
+                                {marza_min:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -392,7 +392,7 @@ def index():
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{marza_max:.2f}" style="color:var(--green-color);">
-                                {marza_max:.0f} zł
+                                {marza_max:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -401,7 +401,7 @@ def index():
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{prowizja_min:.2f}" style="color:var(--red-color);">
-                                {prowizja_min:.0f} zł
+                                {prowizja_min:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -410,7 +410,7 @@ def index():
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">
-                                {sugerowana_cena_min:.0f} zł
+                                {sugerowana_cena_min:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -419,7 +419,7 @@ def index():
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">
-                                {sugerowana_cena_procent:.0f} zł
+                                {sugerowana_cena_procent:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -437,7 +437,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_min / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
-                                    {(marza_min / ilosc_w_zestawie):.0f} zł
+                                    {(marza_min / ilosc_w_zestawie):.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -446,7 +446,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_max / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
-                                    {(marza_max / ilosc_w_zestawie):.0f} zł
+                                    {(marza_max / ilosc_w_zestawie):.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -485,7 +485,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_max:.2f}" style="color:var(--red-color);">
-                                    {prowizja_max:.0f} zł
+                                    {prowizja_max:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -494,7 +494,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_max + koszt_wysylki:.2f}" style="color:var(--red-color);">
-                                    {(prowizja_max + koszt_wysylki):.0f} zł
+                                    {(prowizja_max + koszt_wysylki):.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -503,7 +503,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_darmowa_wysylka:.2f}" style="color:var(--green-color);">
-                                    {marza_darmowa_wysylka:.0f} zł
+                                    {marza_darmowa_wysylka:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -512,7 +512,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_maksymalna:.2f}" style="color:var(--green-color);">
-                                    {marza_maksymalna:.0f} zł
+                                    {marza_maksymalna:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -521,7 +521,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">
-                                    {sugerowana_cena:.0f} zł
+                                    {sugerowana_cena:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -535,7 +535,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_min_kawa:.2f}" style="color:var(--red-color);">
-                                    {prowizja_min_kawa:.0f} zł
+                                    {prowizja_min_kawa:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -544,7 +544,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_max_kawa:.2f}" style="color:var(--green-color);">
-                                    {marza_max_kawa:.0f} zł
+                                    {marza_max_kawa:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -553,7 +553,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_akcesoria:.2f}" style="color:var(--red-color);">
-                                    {prowizja_akcesoria:.0f} zł
+                                    {prowizja_akcesoria:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -562,7 +562,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_akcesoria:.2f}" style="color:var(--green-color);">
-                                    {marza_akcesoria:.0f} zł
+                                    {marza_akcesoria:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -571,7 +571,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_syropy:.2f}" style="color:var(--red-color);">
-                                    {prowizja_syropy:.0f} zł
+                                    {prowizja_syropy:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -580,7 +580,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_syropy:.2f}" style="color:var(--green-color);">
-                                    {marza_syropy:.0f} zł
+                                    {marza_syropy:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -589,7 +589,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_max_agd:.2f}" style="color:var(--red-color);">
-                                    {prowizja_max_agd:.0f} zł
+                                    {prowizja_max_agd:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -598,7 +598,7 @@ def index():
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_min_agd:.2f}" style="color:var(--green-color);">
-                                    {marza_min_agd:.0f} zł
+                                    {marza_min_agd:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -616,7 +616,7 @@ def index():
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_darmowa_wysylka / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
-                                        {(marza_darmowa_wysylka / ilosc_w_zestawie):.0f} zł
+                                        {(marza_darmowa_wysylka / ilosc_w_zestawie):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -625,7 +625,7 @@ def index():
                                 <td>
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_maksymalna / ilosc_w_zestawie:.2f}" style="color:var(--green-color);">
-                                        {(marza_maksymalna / ilosc_w_zestawie):.0f} zł
+                                        {(marza_maksymalna / ilosc_w_zestawie):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -672,7 +672,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f}" 
                                       style="color:var(--green-color);">
-                                    {marza_min_przewoznicy:.0f} - {marza_max_przewoznicy:.0f} zł
+                                    {marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f} zł
                                 </span>
                                 <button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-bez-promowania')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button>
                             </td>
@@ -683,7 +683,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza_najgorsza_opcja:.2f}" 
                                       style="color:var(--orange-color);">
-                                    {marza_najgorsza_opcja:.0f} zł
+                                    {marza_najgorsza_opcja:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -693,7 +693,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_min:.2f}" 
                                       style="color:var(--red-color);">
-                                    {prowizja_min:.0f} zł
+                                    {prowizja_min:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -703,7 +703,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_min + dostawa_minimalna:.2f}" 
                                       style="color:var(--red-color);">
-                                    {(prowizja_min + dostawa_minimalna):.0f} zł
+                                    {(prowizja_min + dostawa_minimalna):.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -713,7 +713,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{prowizja_max + dostawa_maksymalna:.2f}" 
                                       style="color:var(--red-color);">
-                                    {(prowizja_max + dostawa_maksymalna):.0f} zł
+                                    {(prowizja_max + dostawa_maksymalna):.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -723,7 +723,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{sugerowana_cena_min:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_min:.0f} zł
+                                    {sugerowana_cena_min:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -733,7 +733,7 @@ def index():
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{sugerowana_cena_procent:.2f}" 
                                       style="color:var(--blue-color);">
-                                    {sugerowana_cena_procent:.0f} zł
+                                    {sugerowana_cena_procent:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -748,11 +748,11 @@ def index():
                     tabela_przewoznikow += f"""
                     <tr>
                         <td>{przewoznik}</td>
-                        <td>{koszt:.0f} zł</td>
+                        <td>{koszt:.2f} zł</td>
                         <td>
                             <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                   data-value="{marza:.2f}" style="color:var(--green-color);">
-                                {marza:.0f} zł
+                                {marza:.2f} zł
                             </span>
                         </td>
                     </tr>
@@ -789,7 +789,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_min_przewoznicy / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy / ilosc_w_zestawie:.2f}" 
                                           style="color:var(--green-color);">
-                                        {(marza_min_przewoznicy / ilosc_w_zestawie):.0f} - {(marza_max_przewoznicy / ilosc_w_zestawie):.0f} zł
+                                        {(marza_min_przewoznicy / ilosc_w_zestawie):.2f} - {(marza_max_przewoznicy / ilosc_w_zestawie):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -799,7 +799,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_najgorsza_opcja / ilosc_w_zestawie:.2f}" 
                                           style="color:var(--orange-color);">
-                                        {(marza_najgorsza_opcja / ilosc_w_zestawie):.0f} zł
+                                        {(marza_najgorsza_opcja / ilosc_w_zestawie):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -834,7 +834,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_min_przewoznicy_promo:.2f} - {marza_max_przewoznicy_promo:.2f}" 
                                           style="color:var(--green-color);">
-                                        {marza_min_przewoznicy_promo:.0f} - {marza_max_przewoznicy_promo:.0f} zł
+                                        {marza_min_przewoznicy_promo:.2f} - {marza_max_przewoznicy_promo:.2f} zł
                                     </span>
                                     <button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-z-promowaniem')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button>
                                 </td>
@@ -845,7 +845,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{marza_najgorsza_opcja_promo:.2f}" 
                                           style="color:var(--orange-color);">
-                                        {marza_najgorsza_opcja_promo:.0f} zł
+                                        {marza_najgorsza_opcja_promo:.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -855,7 +855,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{prowizja_min_promo:.2f}" 
                                           style="color:var(--red-color);">
-                                        {prowizja_min_promo:.0f} zł
+                                        {prowizja_min_promo:.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -865,7 +865,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{prowizja_min_promo + dostawa_minimalna:.2f}" 
                                           style="color:var(--red-color);">
-                                        {(prowizja_min_promo + dostawa_minimalna):.0f} zł
+                                        {(prowizja_min_promo + dostawa_minimalna):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -875,7 +875,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{prowizja_max_promo + dostawa_maksymalna:.2f}" 
                                           style="color:var(--red-color);">
-                                        {(prowizja_max_promo + dostawa_maksymalna):.0f} zł
+                                        {(prowizja_max_promo + dostawa_maksymalna):.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -885,7 +885,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{sugerowana_cena_min_promo:.2f}" 
                                           style="color:var(--blue-color);">
-                                        {sugerowana_cena_min_promo:.0f} zł
+                                        {sugerowana_cena_min_promo:.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -895,7 +895,7 @@ def index():
                                     <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                           data-value="{sugerowana_cena_procent_promo:.2f}" 
                                           style="color:var(--blue-color);">
-                                        {sugerowana_cena_procent_promo:.0f} zł
+                                        {sugerowana_cena_procent_promo:.2f} zł
                                     </span>
                                 </td>
                             </tr>
@@ -910,11 +910,11 @@ def index():
                         tabela_przewoznikow_promo += f"""
                         <tr>
                             <td>{przewoznik}</td>
-                            <td>{koszt:.0f} zł</td>
+                            <td>{koszt:.2f} zł</td>
                             <td>
                                 <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                       data-value="{marza:.2f}" style="color:var(--green-color);">
-                                    {marza:.0f} zł
+                                    {marza:.2f} zł
                                 </span>
                             </td>
                         </tr>
@@ -951,7 +951,7 @@ def index():
                                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                               data-value="{marza_min_przewoznicy_promo / ilosc_w_zestawie:.2f} - {marza_max_przewoznicy_promo / ilosc_w_zestawie:.2f}" 
                                               style="color:var(--green-color);">
-                                            {(marza_min_przewoznicy_promo / ilosc_w_zestawie):.0f} - {(marza_max_przewoznicy_promo / ilosc_w_zestawie):.0f} zł
+                                            {(marza_min_przewoznicy_promo / ilosc_w_zestawie):.2f} - {(marza_max_przewoznicy_promo / ilosc_w_zestawie):.2f} zł
                                         </span>
                                     </td>
                                 </tr>
@@ -961,7 +961,7 @@ def index():
                                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                                               data-value="{marza_najgorsza_opcja_promo / ilosc_w_zestawie:.2f}" 
                                               style="color:var(--orange-color);">
-                                            {(marza_najgorsza_opcja_promo / ilosc_w_zestawie):.0f} zł
+                                            {(marza_najgorsza_opcja_promo / ilosc_w_zestawie):.2f} zł
                                         </span>
                                     </td>
                                 </tr>
@@ -1074,7 +1074,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_brutto_za_sztuke:.2f}" style="color:var(--blue-color);">
-                            {cena_brutto_za_sztuke:.0f} zł
+                            {cena_brutto_za_sztuke:.2f} zł
                         </span>
                     </td>
                 </tr>
@@ -1083,7 +1083,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_brutto_z_dostawa_za_sztuke:.2f}" style="color:var(--blue-color);">
-                            {cena_brutto_z_dostawa_za_sztuke:.0f} zł
+                            {cena_brutto_z_dostawa_za_sztuke:.2f} zł
                         </span>
                     </td>
                 </tr>
@@ -1092,7 +1092,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_netto_za_sztuke:.2f}" style="color:var(--blue-color);">
-                            {cena_netto_za_sztuke:.0f} zł
+                            {cena_netto_za_sztuke:.2f} zł
                         </span>
                     </td>
                 </tr>
@@ -1101,7 +1101,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">
-                            {koszt_dostawy_sztuka:.0f} zł
+                            {koszt_dostawy_sztuka:.2f} zł
                         </span>
                     </td>
                 </tr>
@@ -1110,7 +1110,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_brutto_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
-                            {(cena_brutto_za_sztuke * ilosc_sztuk):.0f} zł
+                            {(cena_brutto_za_sztuke * ilosc_sztuk):.2f} zł
                         </span>
                     </td>
                 </tr>
@@ -1119,7 +1119,7 @@ def index():
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
                               data-value="{cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
-                            {(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.0f} zł
+                            {(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.2f} zł
                         </span>
                     </td>
                 </tr>

@@ -771,7 +771,7 @@
             window.marzaChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: cenySprzedazy.map(c => c.toFixed(0) + ' zł'),
+                    labels: cenySprzedazy.map(c => Math.round(c) + ' zł'), // Zaokrąglenie do pełnych złotówek tylko dla wykresu
                     datasets: [{
                         label: 'Marża (zł)',
                         data: marze,
@@ -791,7 +791,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return `Marża: ${context.parsed.y.toFixed(0)} zł`;
+                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`; // Dwie cyfry po przecinku w tooltip
                                 }
                             }
                         }
