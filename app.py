@@ -856,52 +856,52 @@ def index():
                                           data-value="{prowizja_min_promo:.2f}" 
                                           style="color:var(--red-color);">
                                         {prowizja_min_promo:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Prowizja z dostawą minimalną</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{prowizja_min_promo + dostawa_minimalna:.2f}" 
-                                          style="color:var(--red-color);">
-                                        {(prowizja_min_promo + dostawa_minimalna):.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Prowizja z dostawą maksymalną</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{prowizja_max_promo + dostawa_maksymalna:.2f}" 
-                                          style="color:var(--red-color);">
-                                        {(prowizja_max_promo + dostawa_maksymalna):.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Minimalna sugerowana cena (marża {marza_kwota:.2f} zł)</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{sugerowana_cena_min_promo:.2f}" 
-                                          style="color:var(--blue-color);">
-                                        {sugerowana_cena_min_promo:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Sugerowana cena (marża {marza_procent:.1f}%)</th>
-                                <td>
-                                    <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                          data-value="{sugerowana_cena_procent_promo:.2f}" 
-                                          style="color:var(--blue-color);">
-                                        {sugerowana_cena_procent_promo:.2f} zł
-                                    </span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    """
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja z dostawą minimalną</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_min_promo + dostawa_minimalna:.2f}" 
+                                      style="color:var(--red-color);">
+                                    {(prowizja_min_promo + dostawa_minimalna):.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Prowizja z dostawą maksymalną</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{prowizja_max_promo + dostawa_maksymalna:.2f}" 
+                                      style="color:var(--red-color);">
+                                    {(prowizja_max_promo + dostawa_maksymalna):.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Minimalna sugerowana cena (marża {marza_kwota:.2f} zł)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{sugerowana_cena_min_promo:.2f}" 
+                                      style="color:var(--blue-color);">
+                                    {sugerowana_cena_min_promo:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Sugerowana cena (marża {marza_procent:.1f}%)</th>
+                            <td>
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{sugerowana_cena_procent_promo:.2f}" 
+                                      style="color:var(--blue-color);">
+                                    {sugerowana_cena_procent_promo:.2f} zł
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                """
                     
                     # Tabela przewoźników dla trybu z promowaniem
                     tabela_przewoznikow_promo = ""
