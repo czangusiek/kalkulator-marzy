@@ -296,7 +296,7 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         sugerowana_cena /= (1 - marza_procent / 100)
 
     for _ in range(10):
-        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawaya)
+        prowizja_min, prowizja_max = oblicz_prowizje(kategoria, sugerowana_cena, promowanie, inna_prowizja, kategoria_podstawowa)
         dostawa_minimalna = oblicz_dostawe_minimalna(sugerowana_cena)
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
         
