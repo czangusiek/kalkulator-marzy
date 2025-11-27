@@ -379,7 +379,7 @@
     <div class="container">
         <div class="kalkulator">
             <h2>Kalkulator marży</h2>
-            <form method="POST" onsubmit="toggleInnaProwizja()">
+            <form method="POST" id="formMarza">
                 {{ form_marza.hidden_tag() }}
                 <label for="cena_zakupu">Cena zakupu:</label>
                 {{ form_marza.cena_zakupu(size=20) }}
@@ -388,7 +388,7 @@
                 {{ form_marza.cena_sprzedazy(size=20) }}
                 <br>
                 <label for="kategoria">Kategoria:</label>
-                {{ form_marza.kategoria(onchange="toggleInnaProwizja()") }}
+                {{ form_marza.kategoria() }}
                 <br>
                 <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
@@ -404,12 +404,12 @@
                     </div>
                     <div id="kategoria-podstawowa-div" class="kategoria-podstawowa">
                         <label for="kategoria_podstawowa">Kategoria podstawowa:</label>
-                        {{ form_marza.kategoria_podstawowa(size=1) }}
+                        {{ form_marza.kategoria_podstawowa() }}
                         <br>
                     </div>
                     
                     <label>
-                        {{ form_marza.czy_smart(onchange="toggleTrybSmart()") }} Czy smart?
+                        {{ form_marza.czy_smart() }} Czy smart?
                     </label>
                     
                     <div id="tryb-nie-smart-div" class="tryb-nie-smart">
@@ -499,11 +499,11 @@
                 {{ form_vat.ilosc_w_dostawie(size=20) }}
                 <br>
                 <label>
-                    {{ form_vat.inna_waluta_towar(onchange="toggleWaluta('towar')") }} Inna waluta niż PLN (towar)
+                    {{ form_vat.inna_waluta_towar() }} Inna waluta niż PLN (towar)
                 </label>
                 <div id="waluta-container-towar" class="waluta-container">
                     <label for="typ_kursu_towar">Typ kursu:</label>
-                    {{ form_vat.typ_kursu_towar(onchange="toggleTypKursu('towar')") }}
+                    {{ form_vat.typ_kursu_towar() }}
                     
                     <div id="waluta-towar-aktualny" class="waluta-typ">
                         <label for="waluta_towar">Waluta:</label>
@@ -523,7 +523,7 @@
                         </select>
                         <label for="data_kursu_towar">Data kursu (RRRR-MM-DD):</label>
                         <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
-                               value="{{ form_vat.data_kursu_towar.data }}">
+                               value="{{ form_vat.data_kursu_towar.data if form_vat.data_kursu_towar.data else '' }}">
                     </div>
                     
                     <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
@@ -532,11 +532,11 @@
                     </div>
                 </div>
                 <label>
-                    {{ form_vat.inna_waluta_dostawa(onchange="toggleWaluta('dostawa')") }} Inna waluta niż PLN (dostawa)
+                    {{ form_vat.inna_waluta_dostawa() }} Inna waluta niż PLN (dostawa)
                 </label>
                 <div id="waluta-container-dostawa" class="waluta-container">
                     <label for="typ_kursu_dostawa">Typ kursu:</label>
-                    {{ form_vat.typ_kursu_dostawa(onchange="toggleTypKursu('dostawa')") }}
+                    {{ form_vat.typ_kursu_dostawa() }}
                     
                     <div id="waluta-dostawa-aktualny" class="waluta-typ">
                         <label for="waluta_dostawa">Waluta:</label>
@@ -556,7 +556,7 @@
                         </select>
                         <label for="data_kursu_dostawa">Data kursu (RRRR-MM-DD):</label>
                         <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
-                               value="{{ form_vat.data_kursu_dostawa.data }}">
+                               value="{{ form_vat.data_kursu_dostawa.data if form_vat.data_kursu_dostawa.data else '' }}">
                     </div>
                     
                     <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
@@ -578,17 +578,20 @@
     <script>
         let lastWalutaTowar = null;
         let lastWalutaDostawa = null;
-        let historiaDanych = {{ historia_marz | tojson | safe }};
+        let historiaDanych = {{ historia_marz | tojson | safe if historia_marz else '[]' }};
 
         function toggleInnaProwizja() {
-            const kategoria = document.getElementById("kategoria").value;
+            const kategoria = document.getElementById("kategoria");
+            if (!kategoria) return;
+            
+            const kategoriaValue = kategoria.value;
             const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
             const kategoriaPodstawowaDiv = document.getElementById("kategoria-podstawowa-div");
             
-            if (kategoria === "H") {
+            if (kategoriaValue === "H") {
                 innaProwizjaDiv.style.display = "block";
                 kategoriaPodstawowaDiv.style.display = "none";
-            } else if (kategoria === "I") {
+            } else if (kategoriaValue === "I") {
                 innaProwizjaDiv.style.display = "none";
                 kategoriaPodstawowaDiv.style.display = "block";
             } else {
@@ -598,10 +601,12 @@
         }
 
         function toggleTrybSmart() {
-            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
+            const czySmart = document.querySelector('input[name="czy_smart"]');
+            if (!czySmart) return;
+            
             const trybNieSmartDiv = document.getElementById("tryb-nie-smart-div");
             
-            if (!czySmart) {
+            if (!czySmart.checked) {
                 trybNieSmartDiv.style.display = "block";
             } else {
                 trybNieSmartDiv.style.display = "none";
@@ -655,7 +660,7 @@
         function toggleWaluta(typ) {
             const checkbox = document.querySelector(`input[name="inna_waluta_${typ}"]`);
             const container = document.getElementById(`waluta-container-${typ}`);
-            if (checkbox.checked) {
+            if (checkbox && checkbox.checked) {
                 container.style.display = "block";
                 toggleTypKursu(typ);
                 
@@ -671,7 +676,10 @@
         }
 
         function toggleTypKursu(typ) {
-            const typKursu = document.querySelector(`select[name="typ_kursu_${typ}"]`).value;
+            const typKursuSelect = document.querySelector(`select[name="typ_kursu_${typ}"]`);
+            if (!typKursuSelect) return;
+            
+            const typKursu = typKursuSelect.value;
             
             document.getElementById(`waluta-${typ}-aktualny`).style.display = "none";
             document.getElementById(`waluta-${typ}-historyczny`).style.display = "none";
@@ -779,15 +787,25 @@
         }
 
         function wczytajZHistorii(index) {
+            if (!historiaDanych || !historiaDanych[index]) return;
+            
             const wpis = historiaDanych[index];
             if (wpis) {
-                document.getElementById('cena_zakupu').value = wpis.cena_zakupu;
-                document.getElementById('cena_sprzedazy').value = wpis.cena_sprzedazy;
-                document.getElementById('kategoria').value = wpis.kategoria;
-                document.querySelector('input[name="czy_smart"]').checked = wpis.czy_smart;
-                document.getElementById('marza_kwota').value = wpis.marza_kwota;
-                document.getElementById('marza_procent').value = wpis.marza_procent;
-                document.getElementById('koszt_pakowania').value = wpis.koszt_pakowania || 0;
+                const cenaZakupu = document.getElementById('cena_zakupu');
+                const cenaSprzedazy = document.getElementById('cena_sprzedazy');
+                const kategoria = document.getElementById('kategoria');
+                const czySmart = document.querySelector('input[name="czy_smart"]');
+                const marzaKwota = document.getElementById('marza_kwota');
+                const marzaProcent = document.getElementById('marza_procent');
+                const kosztPakowania = document.getElementById('koszt_pakowania');
+                
+                if (cenaZakupu) cenaZakupu.value = wpis.cena_zakupu || '';
+                if (cenaSprzedazy) cenaSprzedazy.value = wpis.cena_sprzedazy || '';
+                if (kategoria) kategoria.value = wpis.kategoria || '';
+                if (czySmart) czySmart.checked = wpis.czy_smart || false;
+                if (marzaKwota) marzaKwota.value = wpis.marza_kwota || '';
+                if (marzaProcent) marzaProcent.value = wpis.marza_procent || '';
+                if (kosztPakowania) kosztPakowania.value = wpis.koszt_pakowania || 0;
                 
                 // Przełącz widoczność dodatkowych opcji
                 toggleInnaProwizja();
@@ -796,12 +814,21 @@
         }
 
         function generujSymulacje() {
-            const cenaZakupu = parseFloat(document.getElementById('cena_zakupu').value) || 0;
-            const cenaSprzedazy = parseFloat(document.getElementById('cena_sprzedazy').value) || 0;
-            const kategoria = document.getElementById('kategoria').value;
-            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
-            const kosztPakowania = parseFloat(document.getElementById('koszt_pakowania').value) || 0;
-            const aktualnaIlosc = parseFloat(document.getElementById('ilosc_w_zestawie').value) || 1;
+            const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const cenaSprzedazyEl = document.getElementById('cena_sprzedazy');
+            const kategoriaEl = document.getElementById('kategoria');
+            const czySmartEl = document.querySelector('input[name="czy_smart"]');
+            const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
+            const iloscWZestawieEl = document.getElementById('ilosc_w_zestawie');
+            
+            if (!cenaZakupuEl || !cenaSprzedazyEl || !kategoriaEl || !czySmartEl) return;
+            
+            const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
+            const cenaSprzedazy = parseFloat(cenaSprzedazyEl.value) || 0;
+            const kategoria = kategoriaEl.value;
+            const czySmart = czySmartEl.checked;
+            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
+            const aktualnaIlosc = parseFloat(iloscWZestawieEl ? iloscWZestawieEl.value : 0) || 1;
             
             if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
 
@@ -844,6 +871,9 @@
             });
 
             // Generuj tabelę symulacji
+            const symulacjaTabelaContainer = document.getElementById('symulacja-tabela-container');
+            if (!symulacjaTabelaContainer) return;
+            
             let tabelaHTML = `
                 <table class="symulacja-tabela">
                     <thead>
@@ -874,10 +904,13 @@
                 </table>
             `;
 
-            document.getElementById('symulacja-tabela-container').innerHTML = tabelaHTML;
+            symulacjaTabelaContainer.innerHTML = tabelaHTML;
 
             // Generuj wykres symulacji
-            const ctx = document.getElementById('wykresSymulacji').getContext('2d');
+            const ctx = document.getElementById('wykresSymulacji');
+            if (!ctx) return;
+            
+            const ctxCanvas = ctx.getContext('2d');
             
             if (window.symulacjaChart) {
                 window.symulacjaChart.destroy();
@@ -887,7 +920,7 @@
             const marzeMin = daneSymulacji.map(d => d.marzaMin);
             const marzeMax = daneSymulacji.map(d => d.marzaMax);
 
-            window.symulacjaChart = new Chart(ctx, {
+            window.symulacjaChart = new Chart(ctxCanvas, {
                 type: 'line',
                 data: {
                     labels: etykiety,
@@ -945,10 +978,17 @@
         }
 
         function generujWykresMarzy() {
-            const cenaZakupu = parseFloat(document.getElementById('cena_zakupu').value) || 0;
-            const kategoria = document.getElementById('kategoria').value;
-            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
-            const kosztPakowania = parseFloat(document.getElementById('koszt_pakowania').value) || 0;
+            const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const kategoriaEl = document.getElementById('kategoria');
+            const czySmartEl = document.querySelector('input[name="czy_smart"]');
+            const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
+            
+            if (!cenaZakupuEl || !kategoriaEl || !czySmartEl) return;
+            
+            const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
+            const kategoria = kategoriaEl.value;
+            const czySmart = czySmartEl.checked;
+            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
             
             if (cenaZakupu <= 0) return;
 
@@ -975,14 +1015,17 @@
                 marze.push(marza);
             }
 
-            const ctx = document.getElementById('wykresMarzy').getContext('2d');
+            const ctx = document.getElementById('wykresMarzy');
+            if (!ctx) return;
+            
+            const ctxCanvas = ctx.getContext('2d');
             
             // Zniszcz poprzedni wykres jeśli istnieje
             if (window.marzaChart) {
                 window.marzaChart.destroy();
             }
 
-            window.marzaChart = new Chart(ctx, {
+            window.marzaChart = new Chart(ctxCanvas, {
                 type: 'line',
                 data: {
                     labels: cenySprzedazy.map(c => Math.round(c) + ' zł'), // Zaokrąglenie do pełnych złotówek tylko dla wykresu
@@ -1133,44 +1176,58 @@
             if (savedWalutaTowar) {
                 lastWalutaTowar = savedWalutaTowar;
                 document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                    select.value = savedWalutaTowar;
+                    if (select) select.value = savedWalutaTowar;
                 });
             }
             
             if (savedWalutaDostawa) {
                 lastWalutaDostawa = savedWalutaDostawa;
                 document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                    select.value = savedWalutaDostawa;
+                    if (select) select.value = savedWalutaDostawa;
                 });
             }
             
             document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                select.addEventListener('change', function(event) {
-                    synchronizujWaluty('towar', event);
-                });
+                if (select) {
+                    select.addEventListener('change', function(event) {
+                        synchronizujWaluty('towar', event);
+                    });
+                }
             });
             
             document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                select.addEventListener('change', function(event) {
-                    synchronizujWaluty('dostawa', event);
-                });
+                if (select) {
+                    select.addEventListener('change', function(event) {
+                        synchronizujWaluty('dostawa', event);
+                    });
+                }
             });
             
             const vatForm = document.getElementById('vatForm');
-            vatForm.addEventListener('submit', function() {
-                if (document.querySelector('input[name="inna_waluta_towar"]').checked) {
-                    sessionStorage.setItem('lastWalutaTowar', lastWalutaTowar);
-                }
-                if (document.querySelector('input[name="inna_waluta_dostawa"]').checked) {
-                    sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
-                }
-            });
+            if (vatForm) {
+                vatForm.addEventListener('submit', function() {
+                    const innaWalutaTowar = document.querySelector('input[name="inna_waluta_towar"]');
+                    const innaWalutaDostawa = document.querySelector('input[name="inna_waluta_dostawa"]');
+                    
+                    if (innaWalutaTowar && innaWalutaTowar.checked) {
+                        sessionStorage.setItem('lastWalutaTowar', lastWalutaTowar);
+                    }
+                    if (innaWalutaDostawa && innaWalutaDostawa.checked) {
+                        sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
+                    }
+                });
+            }
 
             // Generuj wykres przy zmianie ceny zakupu
-            document.getElementById('cena_zakupu').addEventListener('input', generujWykresMarzy);
-            document.getElementById('kategoria').addEventListener('change', generujWykresMarzy);
-            document.querySelector('input[name="czy_smart"]').addEventListener('change', generujWykresMarzy);
-            document.getElementById('koszt_pakowania').addEventListener('input', generujWykresMarzy);
+            const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const kategoriaEl = document.getElementById('kategoria');
+            const czySmartEl = document.querySelector('input[name="czy_smart"]');
+            const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
+            
+            if (cenaZakupuEl) cenaZakupuEl.addEventListener('input', generujWykresMarzy);
+            if (kategoriaEl) kategoriaEl.addEventListener('change', generujWykresMarzy);
+            if (czySmartEl) czySmartEl.addEventListener('change', generujWykresMarzy);
+            if (kosztPakowaniaEl) kosztPakowaniaEl.addEventListener('input', generujWykresMarzy);
 
             // Generuj początkowy wykres jeśli mamy dane
             setTimeout(generujWykresMarzy, 1000);
