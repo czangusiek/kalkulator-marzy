@@ -906,7 +906,7 @@ def index():
                     # Tabela przewoźników dla trybu z promowaniem
                     tabela_przewoznikow_promo = ""
                     for przewoznik, koszt in koszty_dostaw.items():
-                        marza = cena_sprzedazy_total - cena_zakupu_total - prowizja_min_promo - koszt - koszt_pakowania
+                        marza = cena_sprzedazyTotal - cena_zakupu_total - prowizja_min_promo - koszt - koszt_pakowania
                         tabela_przewoznikow_promo += f"""
                         <tr>
                             <td>{przewoznik}</td>

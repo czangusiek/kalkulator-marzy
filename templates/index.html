@@ -79,7 +79,7 @@
         }
 
         @media (max-width: 768px) {
-            #kategoria-podstawowa-div select {
+            #kategoria-podstawaya-div select {
                 width: 100% !important;
             }
         }
@@ -320,9 +320,46 @@
             background-color: var(--container-bg);
         }
 
+        .symulacja-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            background-color: var(--container-bg);
+        }
+
+        .symulacja-tabela {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .symulacja-tabela th, .symulacja-tabela td {
+            border: 1px solid var(--table-border);
+            padding: 8px;
+            text-align: center;
+        }
+
+        .symulacja-tabela th {
+            background-color: var(--table-header-bg);
+        }
+
+        .symulacja-tabela .aktualna-ilosc {
+            background-color: rgba(76, 175, 80, 0.2);
+            font-weight: bold;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
+            }
+            
+            .symulacja-tabela {
+                font-size: 12px;
+            }
+            
+            .symulacja-tabela th, .symulacja-tabela td {
+                padding: 4px;
             }
         }
     </style>
@@ -403,6 +440,18 @@
             {% if wynik_marza %}
             <h2>Wynik:</h2>
             <div class="wynik">{{ wynik_marza | safe }}</div>
+            
+            <!-- Sekcja symulacji dla różnych ilości sztuk -->
+            <div class="symulacja-container">
+                <button type="button" class="toggle-wiecej-opcji" onclick="toggleSymulacja()">▼ Symulacja dla różnych ilości sztuk</button>
+                <div id="symulacja" class="wiecej-opcji" style="display: none;">
+                    <h3>Symulacja marży dla różnych ilości sztuk</h3>
+                    <div id="symulacja-tabela-container"></div>
+                    <div class="wykres-container">
+                        <canvas id="wykresSymulacji" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
             {% endif %}
 
             {% if historia_marz %}
@@ -574,6 +623,22 @@
             }
         }
 
+        function toggleSymulacja() {
+            const symulacja = document.getElementById("symulacja");
+            const przycisk = event.target;
+            
+            if (symulacja.style.display === "none" || symulacja.style.display === "") {
+                symulacja.style.display = "block";
+                przycisk.classList.add('otwarty');
+                przycisk.innerHTML = '▲ Symulacja dla różnych ilości sztuk';
+                generujSymulacje();
+            } else {
+                symulacja.style.display = "none";
+                przycisk.classList.remove('otwarty');
+                przycisk.innerHTML = '▼ Symulacja dla różnych ilości sztuk';
+            }
+        }
+
         function toggleTabela(id) {
             const tabela = document.getElementById(id);
             const przycisk = event.target;
@@ -728,6 +793,155 @@
                 toggleInnaProwizja();
                 toggleTrybSmart();
             }
+        }
+
+        function generujSymulacje() {
+            const cenaZakupu = parseFloat(document.getElementById('cena_zakupu').value) || 0;
+            const cenaSprzedazy = parseFloat(document.getElementById('cena_sprzedazy').value) || 0;
+            const kategoria = document.getElementById('kategoria').value;
+            const czySmart = document.querySelector('input[name="czy_smart"]').checked;
+            const kosztPakowania = parseFloat(document.getElementById('koszt_pakowania').value) || 0;
+            const aktualnaIlosc = parseFloat(document.getElementById('ilosc_w_zestawie').value) || 1;
+            
+            if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
+
+            // Generuj ilości sztuk do symulacji (od 1 do 20, z zaznaczeniem aktualnej)
+            const ilosciSztuk = [];
+            for (let i = 1; i <= 20; i++) {
+                ilosciSztuk.push(i);
+            }
+
+            const daneSymulacji = [];
+            
+            ilosciSztuk.forEach(ilosc => {
+                const cenaZakupuTotal = cenaZakupu * ilosc;
+                const cenaSprzedazyTotal = cenaSprzedazy * ilosc;
+                
+                let marzaMin = 0;
+                let marzaMax = 0;
+                
+                if (czySmart && kategoria !== "G" && kategoria !== "I") {
+                    const prowizjaMin = obliczProwizje(kategoria, cenaSprzedazyTotal, false);
+                    const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cenaSprzedazyTotal);
+                    const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cenaSprzedazyTotal - cenaZakupuTotal - prowizjaMin - koszt - kosztPakowania);
+                    marzaMin = Math.min(...marzePrzewoznicy);
+                    marzaMax = Math.max(...marzePrzewoznicy);
+                } else {
+                    const prowizja = obliczProwizje(kategoria, cenaSprzedazyTotal, false);
+                    marzaMin = cenaSprzedazyTotal - cenaZakupuTotal - prowizja - kosztPakowania;
+                    marzaMax = marzaMin;
+                }
+                
+                daneSymulacji.push({
+                    ilosc: ilosc,
+                    cenaSprzedazyTotal: cenaSprzedazyTotal,
+                    marzaMin: marzaMin,
+                    marzaMax: marzaMax,
+                    marzaNaSztukeMin: marzaMin / ilosc,
+                    marzaNaSztukeMax: marzaMax / ilosc,
+                    czyAktualna: ilosc === aktualnaIlosc
+                });
+            });
+
+            // Generuj tabelę symulacji
+            let tabelaHTML = `
+                <table class="symulacja-tabela">
+                    <thead>
+                        <tr>
+                            <th>Ilość sztuk</th>
+                            <th>Cena sprzedaży całkowita</th>
+                            <th>Marża całkowita (min-max)</th>
+                            <th>Marża na sztukę (min-max)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            daneSymulacji.forEach(dane => {
+                const klasaWiersza = dane.czyAktualna ? 'aktualna-ilosc' : '';
+                tabelaHTML += `
+                    <tr class="${klasaWiersza}">
+                        <td><strong>${dane.ilosc}</strong></td>
+                        <td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td>
+                        <td>${dane.marzaMin.toFixed(2)} - ${dane.marzaMax.toFixed(2)} zł</td>
+                        <td>${dane.marzaNaSztukeMin.toFixed(2)} - ${dane.marzaNaSztukeMax.toFixed(2)} zł</td>
+                    </tr>
+                `;
+            });
+
+            tabelaHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('symulacja-tabela-container').innerHTML = tabelaHTML;
+
+            // Generuj wykres symulacji
+            const ctx = document.getElementById('wykresSymulacji').getContext('2d');
+            
+            if (window.symulacjaChart) {
+                window.symulacjaChart.destroy();
+            }
+
+            const etykiety = daneSymulacji.map(d => d.ilosc + ' szt.');
+            const marzeMin = daneSymulacji.map(d => d.marzaMin);
+            const marzeMax = daneSymulacji.map(d => d.marzaMax);
+
+            window.symulacjaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: etykiety,
+                    datasets: [
+                        {
+                            label: 'Marża minimalna',
+                            data: marzeMin,
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Marża maksymalna',
+                            data: marzeMax,
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Marża całkowita w zależności od ilości sztuk'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} zł`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Ilość sztuk'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Marża całkowita (zł)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
 
         function generujWykresMarzy() {
