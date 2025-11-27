@@ -824,7 +824,7 @@
             if (!cenaZakupuEl || !cenaSprzedazyEl || !kategoriaEl || !czySmartEl) return;
             
             const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
-            const cenaSprzedazy = parseFloat(cenaSprzedazyEl.value) || 0;
+            const cenaSprzedazy = parseFloat(parseFloat(cenaSprzedazyEl.value).toFixed(4)) || 0; // POPRAWIONE - zachowaj precyzję
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
             const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
@@ -842,7 +842,7 @@
             
             ilosciSztuk.forEach(ilosc => {
                 const cenaZakupuTotal = cenaZakupu * ilosc;
-                const cenaSprzedazyTotal = cenaSprzedazy * ilosc; // NIE zaokrąglaj ceny!
+                const cenaSprzedazyTotal = cenaSprzedazy * ilosc; // NIE zaokrąglaj!
                 
                 let marzaMin = 0;
                 let marzaMax = 0;
@@ -892,7 +892,7 @@
                 tabelaHTML += `
                     <tr class="${klasaWiersza}">
                         <td><strong>${dane.ilosc}</strong></td>
-                        <td>${dane.cenaSprzedazyTotal.toFixed(4)} zł</td>
+                        <td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td> <!-- ZMIENIONE z powrotem na 2 miejsca -->
                         <td>${dane.marzaMin.toFixed(2)} - ${dane.marzaMax.toFixed(2)} zł</td>
                         <td>${dane.marzaNaSztukeMin.toFixed(2)} - ${dane.marzaNaSztukeMax.toFixed(2)} zł</td>
                     </tr>
