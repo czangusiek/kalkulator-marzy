@@ -824,13 +824,18 @@
             if (!cenaZakupuEl || !cenaSprzedazyEl || !kategoriaEl || !czySmartEl) return;
             
             const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
-            const cenaSprzedazy = parseFloat(parseFloat(cenaSprzedazyEl.value).toFixed(4)) || 0; // POPRAWIONE - zachowaj precyzję
+            const cenaSprzedazy = Number(cenaSprzedazyEl.value) || 0; // ZMIENIONE - użyj Number zamiast parseFloat
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
             const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
             const aktualnaIlosc = parseFloat(iloscWZestawieEl ? iloscWZestawieEl.value : 0) || 1;
             
             if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
+
+            // DEBUG - sprawdź wartości
+            console.log("DEBUG - Cena sprzedazy:", cenaSprzedazy);
+            console.log("DEBUG - Cena sprzedazy dla 2 sztuk:", cenaSprzedazy * 2);
+            console.log("DEBUG - Typ danych:", typeof cenaSprzedazy);
 
             // Generuj ilości sztuk do symulacji (od 1 do 20, z zaznaczeniem aktualnej)
             const ilosciSztuk = [];
@@ -892,7 +897,7 @@
                 tabelaHTML += `
                     <tr class="${klasaWiersza}">
                         <td><strong>${dane.ilosc}</strong></td>
-                        <td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td> <!-- ZMIENIONE z powrotem na 2 miejsca -->
+                        <td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td>
                         <td>${dane.marzaMin.toFixed(2)} - ${dane.marzaMax.toFixed(2)} zł</td>
                         <td>${dane.marzaNaSztukeMin.toFixed(2)} - ${dane.marzaNaSztukeMax.toFixed(2)} zł</td>
                     </tr>
@@ -1096,6 +1101,7 @@
         }
 
         function obliczKosztDostawyDlaPrzewoznika(cena) {
+            // USUŃ wszelkie zaokrąglania - używaj dokładnej ceny!
             if (cena < 30) {
                 return {
                     'Allegro Paczkomaty InPost': 0,
@@ -1106,7 +1112,7 @@
                     'Allegro Kurier Pocztex': 0,
                     'Allegro One Kurier (Allegro Delivery)': 0
                 };
-            } else if (30 <= cena && cena < 45) {
+            } else if (cena >= 30 && cena < 45) {
                 return {
                     'Allegro Paczkomaty InPost': 1.59,
                     'Allegro Automat Pocztex': 1.29,
@@ -1116,7 +1122,7 @@
                     'Allegro Kurier Pocztex': 1.99,
                     'Allegro One Kurier (Allegro Delivery)': 1.79
                 };
-            } else if (45 <= cena && cena < 65) {
+            } else if (cena >= 45 && cena < 65) {
                 return {
                     'Allegro Paczkomaty InPost': 3.09,
                     'Allegro Automat Pocztex': 2.49,
@@ -1126,7 +1132,7 @@
                     'Allegro Kurier Pocztex': 3.99,
                     'Allegro One Kurier (Allegro Delivery)': 3.69
                 };
-            } else if (65 <= cena && cena < 100) {
+            } else if (cena >= 65 && cena < 100) {
                 return {
                     'Allegro Paczkomaty InPost': 4.99,
                     'Allegro Automat Pocztex': 4.29,
@@ -1136,7 +1142,7 @@
                     'Allegro Kurier Pocztex': 5.79,
                     'Allegro One Kurier (Allegro Delivery)': 5.39
                 };
-            } else if (100 <= cena && cena < 150) {
+            } else if (cena >= 100 && cena < 150) {
                 return {
                     'Allegro Paczkomaty InPost': 7.59,
                     'Allegro Automat Pocztex': 6.69,
