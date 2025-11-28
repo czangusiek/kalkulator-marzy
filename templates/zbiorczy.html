@@ -70,15 +70,15 @@
             margin-bottom: 20px;
         }
 
-        textarea {
-            width: 100%;
-            min-height: 200px;
+        input[type="file"] {
             padding: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
             background-color: var(--bg-color);
             color: var(--text-color);
             border: 1px solid var(--table-border);
             border-radius: 4px;
-            resize: vertical;
         }
 
         input[type="submit"] {
@@ -171,6 +171,24 @@
             font-size: 14px;
         }
 
+        .error-message {
+            color: var(--red-color);
+            background-color: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid var(--red-color);
+        }
+
+        .success-message {
+            color: var(--green-color);
+            background-color: rgba(0, 255, 0, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid var(--green-color);
+        }
+
         .kwota-do-kopiowania {
             cursor: pointer;
             transition: all 0.2s;
@@ -208,14 +226,14 @@
     
     <div class="kalkulator">
         <h2>Oblicz marże dla wielu produktów</h2>
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             {{ form_zbiorczy.hidden_tag() }}
             
-            <label for="plik_csv">Wklej dane CSV:</label>
-            {{ form_zbiorczy.plik_csv(rows=10, placeholder="LP;NAZWA;CENA_NETTO;CENA_BRUTTO\n1;Produkt A;10.00;15.00\n2;Produkt B;20.00;30.00") }}
+            <label for="plik_csv">Prześlij plik CSV:</label>
+            {{ form_zbiorczy.plik_csv() }}
             
             <div class="przyklad-csv">
-                <strong>Przykład formatu CSV:</strong><br>
+                <strong>Wymagany format pliku CSV:</strong><br>
                 LP;NAZWA;CENA_NETTO;CENA_BRUTTO<br>
                 1;Produkt A;10.00;15.00<br>
                 2;Produkt B;20.00;30.00<br>
@@ -227,6 +245,7 @@
                     <li>Wymagane kolumny: NAZWA oraz przynajmniej jedna z cen (NETTO lub BRUTTO)</li>
                     <li>Jeśli brakuje jednej z cen, zostanie obliczona automatycznie (VAT 23%)</li>
                     <li>Możesz wyeksportować dane z Excela jako CSV</li>
+                    <li>Obsługiwane encodingi: UTF-8, Windows-1250, ISO-8859-2</li>
                 </ul>
             </div>
             
@@ -243,6 +262,12 @@
             <br>
             {{ form_zbiorczy.submit_zbiorczy() }}
         </form>
+
+        {% if error_message %}
+        <div class="error-message">
+            <strong>Błąd:</strong> {{ error_message }}
+        </div>
+        {% endif %}
     </div>
 
     {% if wyniki_zbiorcze %}
@@ -289,7 +314,7 @@
             <tbody>
                 {% for wynik in wyniki_zbiorcze %}
                 <tr>
-                    <td>{{ loop.index }}</td>
+                    <td>{{ wynik.lp if wynik.lp else loop.index }}</td>
                     <td>{{ wynik.nazwa }}</td>
                     <td>
                         <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 

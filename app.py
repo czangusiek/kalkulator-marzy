@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, TextAreaField
+from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, TextAreaField, FileField
 from wtforms.validators import DataRequired, Optional, NumberRange
 from datetime import datetime, timedelta
 import requests
@@ -9,10 +9,12 @@ import difflib
 import json
 import csv
 import io
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 def pobierz_kurs_waluty(waluta, data=None):
     try:
@@ -139,7 +141,7 @@ class KalkulatorVATForm(FlaskForm):
     submit = SubmitField('Oblicz')
 
 class KalkulatorZbiorczyForm(FlaskForm):
-    plik_csv = StringField('Dane CSV:')
+    plik_csv = FileField('Prześlij plik CSV:')
     kategoria_zbiorcza = SelectField('Kategoria:', choices=[
         ('A', 'Supermarket (6,15%)'),
         ('B', 'Cukier (12,92%)'),
@@ -160,58 +162,103 @@ def zamien_przecinek_na_kropke(liczba):
         return float(liczba.replace(",", "."))
     return liczba
 
-def przetworz_dane_zbiorcze(dane_csv, kategoria, czy_smart, koszt_pakowania):
-    """Przetwarza dane CSV i oblicza marże dla każdego produktu"""
+def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
+    """Przetwarza przesłany plik CSV i oblicza marże dla każdego produktu"""
     try:
-        # Konwersja danych CSV
-        if isinstance(dane_csv, str):
-            csv_data = io.StringIO(dane_csv)
-        else:
-            csv_data = io.StringIO(dane_csv.read().decode('utf-8-sig'))
+        # Sprawdź rozszerzenie pliku
+        filename = secure_filename(plik_csv.filename)
+        if not (filename.endswith('.csv') or filename.endswith('.txt')):
+            return None, "Dozwolone są tylko pliki CSV lub TXT"
         
-        reader = csv.DictReader(csv_data, delimiter=';')
-        if reader.fieldnames is None:
-            reader = csv.DictReader(csv_data, delimiter=',')
+        # Odczytaj zawartość pliku
+        content = plik_csv.read()
+        
+        # Spróbuj różnych encodingów
+        for encoding in ['utf-8-sig', 'utf-8', 'cp1250', 'iso-8859-2']:
+            try:
+                content_decoded = content.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            return None, "Błąd kodowania pliku - użyj UTF-8"
+        
+        # Spróbuj różnych separatorów
+        for delimiter in [';', ',', '\t']:
+            try:
+                csv_data = io.StringIO(content_decoded)
+                reader = csv.DictReader(csv_data, delimiter=delimiter)
+                if reader.fieldnames:
+                    break
+            except:
+                continue
+        else:
+            return None, "Nieprawidłowy format CSV"
         
         produkty = []
         for row in reader:
-            # Szukamy kolumn z cenami (case insensitive)
+            # Szukamy kolumn z cenami (case insensitive i z polskimi znakami)
             cena_netto = None
             cena_brutto = None
             nazwa = ""
+            lp = ""
             
             for key, value in row.items():
+                if value is None:
+                    continue
+                    
                 key_lower = key.lower().strip()
-                if 'nazwa' in key_lower or 'nazwa' in key_lower:
-                    nazwa = value.strip()
+                value = str(value).strip()
+                
+                if 'lp' in key_lower or 'l.p' in key_lower or 'nr' in key_lower:
+                    lp = value
+                elif 'nazwa' in key_lower or 'produkt' in key_lower or 'nazwa' in key_lower:
+                    nazwa = value
                 elif 'netto' in key_lower:
                     try:
-                        cena_netto = zamien_przecinek_na_kropke(value) if value.strip() else None
-                    except:
+                        # Usuń zł, PLN itp. i zamień przecinki na kropki
+                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cena_netto = float(cleaned_value) if cleaned_value else None
+                    except (ValueError, TypeError):
                         cena_netto = None
                 elif 'brutto' in key_lower:
                     try:
-                        cena_brutto = zamien_przecinek_na_kropke(value) if value.strip() else None
-                    except:
+                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cena_brutto = float(cleaned_value) if cleaned_value else None
+                    except (ValueError, TypeError):
                         cena_brutto = None
+                elif 'cena' in key_lower and cena_netto is None and cena_brutto is None:
+                    # Jeśli jest tylko kolumna "cena", traktuj jako brutto
+                    try:
+                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cena_brutto = float(cleaned_value) if cleaned_value else None
+                    except (ValueError, TypeError):
+                        cena_brutto = None
+            
+            # Jeśli nie znaleziono nazwy, pomiń wiersz
+            if not nazwa:
+                continue
             
             # Oblicz brakującą cenę
             if cena_netto is not None and cena_brutto is None:
                 cena_brutto = cena_netto * 1.23  # domyślnie 23% VAT
             elif cena_brutto is not None and cena_netto is None:
                 cena_netto = cena_brutto / 1.23
+            elif cena_netto is None and cena_brutto is None:
+                continue  # Pomijamy jeśli brak obu cen
             
-            if cena_netto is not None and cena_brutto is not None and nazwa:
-                produkty.append({
-                    'nazwa': nazwa,
-                    'cena_netto': cena_netto,
-                    'cena_brutto': cena_brutto
-                })
+            produkty.append({
+                'lp': lp,
+                'nazwa': nazwa,
+                'cena_netto': cena_netto,
+                'cena_brutto': cena_brutto
+            })
         
-        return produkty
+        return produkty, None
+        
     except Exception as e:
-        print(f"Błąd przetwarzania CSV: {e}")
-        return []
+        print(f"Błąd przetwarzania pliku: {e}")
+        return None, f"Błąd przetwarzania pliku: {str(e)}"
 
 def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=True, koszt_pakowania=0):
     """Oblicza marżę dla pojedynczego produktu"""
@@ -1351,46 +1398,53 @@ def zbiorczy():
     laczna_cena_zakupu = 0
     laczna_cena_sprzedazy = 0
     liczba_produktow = 0
+    error_message = None
     
     if form_zbiorczy.submit_zbiorczy.data and form_zbiorczy.validate():
-        dane_csv = form_zbiorczy.plik_csv.data
+        plik_csv = request.files.get('plik_csv')
         kategoria = form_zbiorczy.kategoria_zbiorcza.data
         czy_smart = form_zbiorczy.czy_smart_zbiorcze.data
         koszt_pakowania = form_zbiorczy.koszt_pakowania_zbiorcze.data
         
-        produkty = przetworz_dane_zbiorcze(dane_csv, kategoria, czy_smart, koszt_pakowania)
-        
-        if produkty:
-            wyniki = []
-            for produkt in produkty:
-                cena_zakupu = produkt['cena_netto']
-                cena_sprzedazy = produkt['cena_brutto']
-                
-                marza_dane = oblicz_marze_dla_produktu(
-                    cena_zakupu, 
-                    cena_sprzedazy, 
-                    kategoria, 
-                    czy_smart, 
-                    koszt_pakowania
-                )
-                
-                wyniki.append({
-                    'nazwa': produkt['nazwa'],
-                    'cena_zakupu': cena_zakupu,
-                    'cena_sprzedazy': cena_sprzedazy,
-                    'prowizja': marza_dane['prowizja'],
-                    'dostawa': marza_dane['dostawa'],
-                    'marza_netto': marza_dane['marza_netto'],
-                    'marza_procent': marza_dane['marza_procent'],
-                    'koszt_pakowania': marza_dane['koszt_pakowania']
-                })
-                
-                laczna_marza += marza_dane['marza_netto']
-                laczna_cena_zakupu += cena_zakupu
-                laczna_cena_sprzedazy += cena_sprzedazy
-                liczba_produktow += 1
+        if plik_csv and plik_csv.filename:
+            produkty, error = przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania)
             
-            wyniki_zbiorcze = wyniki
+            if error:
+                error_message = error
+            elif produkty:
+                wyniki = []
+                for produkt in produkty:
+                    cena_zakupu = produkt['cena_netto']
+                    cena_sprzedazy = produkt['cena_brutto']
+                    
+                    marza_dane = oblicz_marze_dla_produktu(
+                        cena_zakupu, 
+                        cena_sprzedazy, 
+                        kategoria, 
+                        czy_smart, 
+                        koszt_pakowania
+                    )
+                    
+                    wyniki.append({
+                        'lp': produkt['lp'],
+                        'nazwa': produkt['nazwa'],
+                        'cena_zakupu': cena_zakupu,
+                        'cena_sprzedazy': cena_sprzedazy,
+                        'prowizja': marza_dane['prowizja'],
+                        'dostawa': marza_dane['dostawa'],
+                        'marza_netto': marza_dane['marza_netto'],
+                        'marza_procent': marza_dane['marza_procent'],
+                        'koszt_pakowania': marza_dane['koszt_pakowania']
+                    })
+                    
+                    laczna_marza += marza_dane['marza_netto']
+                    laczna_cena_zakupu += cena_zakupu
+                    laczna_cena_sprzedazy += cena_sprzedazy
+                    liczba_produktow += 1
+                
+                wyniki_zbiorcze = wyniki
+        else:
+            error_message = "Proszę wybrać plik do przesłania"
 
     return render_template(
         "zbiorczy.html",
@@ -1399,7 +1453,8 @@ def zbiorczy():
         laczna_marza=laczna_marza,
         laczna_cena_zakupu=laczna_cena_zakupu,
         laczna_cena_sprzedazy=laczna_cena_sprzedazy,
-        liczba_produktow=liczba_produktow
+        liczba_produktow=liczba_produktow,
+        error_message=error_message
     )
 
 if __name__ == "__main__":
