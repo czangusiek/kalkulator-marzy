@@ -823,19 +823,23 @@
             
             if (!cenaZakupuEl || !cenaSprzedazyEl || !kategoriaEl || !czySmartEl) return;
             
+            // POPRAWIONE - użyj parseFloat z zabezpieczeniem przed NaN
             const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
-            const cenaSprzedazy = Number(cenaSprzedazyEl.value) || 0; // ZMIENIONE - użyj Number zamiast parseFloat
+            const cenaSprzedazy = parseFloat(cenaSprzedazyEl.value.replace(',', '.')) || 0; // Zamień przecinki na kropki
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
             const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
             const aktualnaIlosc = parseFloat(iloscWZestawieEl ? iloscWZestawieEl.value : 0) || 1;
             
-            if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
-
             // DEBUG - sprawdź wartości
             console.log("DEBUG - Cena sprzedazy:", cenaSprzedazy);
             console.log("DEBUG - Cena sprzedazy dla 2 sztuk:", cenaSprzedazy * 2);
             console.log("DEBUG - Typ danych:", typeof cenaSprzedazy);
+
+            if (cenaZakupu <= 0 || cenaSprzedazy <= 0) {
+                console.log("DEBUG - Brak danych do symulacji");
+                return;
+            }
 
             // Generuj ilości sztuk do symulacji (od 1 do 20, z zaznaczeniem aktualnej)
             const ilosciSztuk = [];
