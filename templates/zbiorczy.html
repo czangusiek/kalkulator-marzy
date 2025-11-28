@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pl" class="{{ 'dark-mode' if session.get('dark_mode') else '' }}">
+<head>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator marży zbiorczej</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --table-header-bg: #f2f2f2;
+            --table-border: #ddd;
+            --container-bg: #f9f9f9;
+            --container-border: #ccc;
+            --hr-color: #ccc;
+            --red-color: #ff0000;
+            --green-color: #008000;
+            --blue-color: #0000ff;
+            --orange-color: #ffa500;
+        }
+
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --table-header-bg: #1e1e1e;
+            --table-border: #444;
+            --container-bg: #1a1a1a;
+            --container-border: #555;
+            --hr-color: #555;
+            --red-color: #ff6b6b;
+            --green-color: #6bff6b;
+            --blue-color: #6b6bff;
+            --orange-color: #ffb74d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nawigacja {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid var(--container-border);
+        }
+
+        .nawigacja a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: var(--blue-color);
+            font-weight: bold;
+        }
+
+        .nawigacja a.aktywny {
+            color: var(--green-color);
+            text-decoration: underline;
+        }
+
+        .kalkulator {
+            padding: 20px;
+            border: 1px solid var(--container-border);
+            border-radius: 5px;
+            background-color: var(--container-bg);
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        select, input[type="text"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--table-border);
+            border-radius: 4px;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .wynik {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .wynik table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .wynik th, .wynik td {
+            border: 1px solid var(--table-border);
+            padding: 8px;
+            text-align: left;
+        }
+        .wynik th {
+            background-color: var(--table-header-bg);
+        }
+
+        .podsumowanie {
+            background-color: var(--table-header-bg);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: var(--container-bg);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--green-color);
+        }
+
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            color: var(--text-color);
+        }
+
+        .przyklad-csv {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--table-header-bg);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .kwota-do-kopiowania {
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 2px 5px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .kwota-do-kopiowania:hover {
+            background-color: var(--table-header-bg);
+            box-shadow: 0 0 0 1px var(--table-border);
+        }
+        .kwota-do-kopiowania:active {
+            transform: scale(0.98);
+        }
+        .skopiowano-info {
+            color: var(--green-color);
+            font-size: 0.8em;
+            margin-left: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+        {{ '🌞' if session.get('dark_mode') else '🌓' }}
+    </button>
+
+    <h1>Kalkulator marży zbiorczej</h1>
+    <div class="nawigacja">
+        <a href="/">Kalkulator</a> | 
+        <a href="/licznik">Licznik</a> | 
+        <a href="/porownaj">Porównywarka</a> |
+        <a href="/zbiorczy" class="aktywny">Marża zbiorcza</a>
+    </div>
+    
+    <div class="kalkulator">
+        <h2>Oblicz marże dla wielu produktów</h2>
+        <form method="POST">
+            {{ form_zbiorczy.hidden_tag() }}
+            
+            <label for="plik_csv">Wklej dane CSV:</label>
+            {{ form_zbiorczy.plik_csv(rows=10, placeholder="LP;NAZWA;CENA_NETTO;CENA_BRUTTO\n1;Produkt A;10.00;15.00\n2;Produkt B;20.00;30.00") }}
+            
+            <div class="przyklad-csv">
+                <strong>Przykład formatu CSV:</strong><br>
+                LP;NAZWA;CENA_NETTO;CENA_BRUTTO<br>
+                1;Produkt A;10.00;15.00<br>
+                2;Produkt B;20.00;30.00<br>
+                3;Produkt C;5.00;8.50<br>
+                <br>
+                <strong>Uwagi:</strong>
+                <ul>
+                    <li>Możesz użyć średnika (;) lub przecinka (,) jako separatora</li>
+                    <li>Wymagane kolumny: NAZWA oraz przynajmniej jedna z cen (NETTO lub BRUTTO)</li>
+                    <li>Jeśli brakuje jednej z cen, zostanie obliczona automatycznie (VAT 23%)</li>
+                    <li>Możesz wyeksportować dane z Excela jako CSV</li>
+                </ul>
+            </div>
+            
+            <label for="kategoria_zbiorcza">Kategoria:</label>
+            {{ form_zbiorczy.kategoria_zbiorcza() }}
+            
+            <label>
+                {{ form_zbiorczy.czy_smart_zbiorcze() }} Czy smart?
+            </label>
+            
+            <label for="koszt_pakowania_zbiorcze">Koszt pakowania na sztukę (zł):</label>
+            {{ form_zbiorczy.koszt_pakowania_zbiorcze(value="0") }}
+            
+            <br>
+            {{ form_zbiorczy.submit_zbiorczy() }}
+        </form>
+    </div>
+
+    {% if wyniki_zbiorcze %}
+    <div class="podsumowanie">
+        <h3>Podsumowanie zbiorcze</h3>
+        <div class="stat-box">
+            <div>Łączna marża</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_marza) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div>Średnia marża/szt</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_marza/liczba_produktow if liczba_produktow > 0 else 0) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div>Łączny zakup</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_cena_zakupu) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div>Łączna sprzedaż</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_cena_sprzedazy) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div>Liczba produktów</div>
+            <div class="stat-value">{{ liczba_produktow }}</div>
+        </div>
+    </div>
+
+    <div class="wynik">
+        <h3>Szczegółowe wyniki</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>LP</th>
+                    <th>Nazwa produktu</th>
+                    <th>Cena zakupu</th>
+                    <th>Cena sprzedaży</th>
+                    <th>Prowizja</th>
+                    <th>Dostawa</th>
+                    <th>Pakowanie</th>
+                    <th>Marża netto</th>
+                    <th>Marża %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wynik in wyniki_zbiorcze %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ wynik.nazwa }}</td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.cena_zakupu) }}">
+                            {{ "%.2f"|format(wynik.cena_zakupu) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.cena_sprzedazy) }}">
+                            {{ "%.2f"|format(wynik.cena_sprzedazy) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.prowizja) }}" style="color:var(--red-color);">
+                            {{ "%.2f"|format(wynik.prowizja) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.dostawa) }}" style="color:var(--red-color);">
+                            {{ "%.2f"|format(wynik.dostawa) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.koszt_pakowania) }}" style="color:var(--red-color);">
+                            {{ "%.2f"|format(wynik.koszt_pakowania) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.2f"|format(wynik.marza_netto) }}" style="color:var(--green-color);">
+                            {{ "%.2f"|format(wynik.marza_netto) }} zł
+                        </span>
+                    </td>
+                    <td>
+                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                              data-value="{{ "%.1f"|format(wynik.marza_procent) }}" style="color:var(--blue-color);">
+                            {{ "%.1f"|format(wynik.marza_procent) }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <script>
+        function toggleDarkMode() {
+            fetch('/toggle_dark_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.body.classList.toggle('dark-mode', data.dark_mode);
+                    document.querySelector('.dark-mode-toggle').textContent = data.icon;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function kopiujDoSchowka(element) {
+            const wartosc = element.getAttribute('data-value');
+            const potwierdzenie = document.createElement('span');
+            potwierdzenie.className = 'skopiowano-info';
+            potwierdzenie.textContent = '✓';
+            element.appendChild(potwierdzenie);
+            potwierdzenie.style.display = 'inline';
+            
+            setTimeout(() => {
+                potwierdzenie.style.display = 'none';
+            }, 2000);
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(wartosc).catch(() => {
+                    kopiujFallback(wartosc);
+                });
+            } else {
+                kopiujFallback(wartosc);
+            }
+        }
+
+        function kopiujFallback(wartosc) {
+            const textarea = document.createElement('textarea');
+            textarea.value = wartosc;
+            textarea.style.position = 'fixed';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+    </script>
+</body>
+</html>

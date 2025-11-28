@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import requests
 import difflib
 import json
+import csv
+import io
 
 app = Flask(__name__)
 app.secret_key = 'tajny_klucz'
@@ -136,10 +138,132 @@ class KalkulatorVATForm(FlaskForm):
     kurs_waluty_dostawa = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     submit = SubmitField('Oblicz')
 
+class KalkulatorZbiorczyForm(FlaskForm):
+    plik_csv = StringField('Dane CSV:')
+    kategoria_zbiorcza = SelectField('Kategoria:', choices=[
+        ('A', 'Supermarket (6,15%)'),
+        ('B', 'Cukier (12,92%)'),
+        ('C', 'Chemia gospodarcza (12,92%)'),
+        ('D', 'AGD zwykłe (13,53%)'),
+        ('E', 'Elektronika (5,55%)'),
+        ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
+        ('G', 'Sklep internetowy'),
+        ('H', 'Inna prowizja'),
+        ('I', 'Strefa okazji (+60% prowizji podstawowej)')
+    ], default="A", validators=[DataRequired()])
+    czy_smart_zbiorcze = BooleanField('Czy smart?', default=True)
+    koszt_pakowania_zbiorcze = StringField('Koszt pakowania na sztukę (zł):', default="0")
+    submit_zbiorczy = SubmitField('Oblicz marże zbiorczo')
+
 def zamien_przecinek_na_kropke(liczba):
     if isinstance(liczba, str):
         return float(liczba.replace(",", "."))
     return liczba
+
+def przetworz_dane_zbiorcze(dane_csv, kategoria, czy_smart, koszt_pakowania):
+    """Przetwarza dane CSV i oblicza marże dla każdego produktu"""
+    try:
+        # Konwersja danych CSV
+        if isinstance(dane_csv, str):
+            csv_data = io.StringIO(dane_csv)
+        else:
+            csv_data = io.StringIO(dane_csv.read().decode('utf-8-sig'))
+        
+        reader = csv.DictReader(csv_data, delimiter=';')
+        if reader.fieldnames is None:
+            reader = csv.DictReader(csv_data, delimiter=',')
+        
+        produkty = []
+        for row in reader:
+            # Szukamy kolumn z cenami (case insensitive)
+            cena_netto = None
+            cena_brutto = None
+            nazwa = ""
+            
+            for key, value in row.items():
+                key_lower = key.lower().strip()
+                if 'nazwa' in key_lower or 'nazwa' in key_lower:
+                    nazwa = value.strip()
+                elif 'netto' in key_lower:
+                    try:
+                        cena_netto = zamien_przecinek_na_kropke(value) if value.strip() else None
+                    except:
+                        cena_netto = None
+                elif 'brutto' in key_lower:
+                    try:
+                        cena_brutto = zamien_przecinek_na_kropke(value) if value.strip() else None
+                    except:
+                        cena_brutto = None
+            
+            # Oblicz brakującą cenę
+            if cena_netto is not None and cena_brutto is None:
+                cena_brutto = cena_netto * 1.23  # domyślnie 23% VAT
+            elif cena_brutto is not None and cena_netto is None:
+                cena_netto = cena_brutto / 1.23
+            
+            if cena_netto is not None and cena_brutto is not None and nazwa:
+                produkty.append({
+                    'nazwa': nazwa,
+                    'cena_netto': cena_netto,
+                    'cena_brutto': cena_brutto
+                })
+        
+        return produkty
+    except Exception as e:
+        print(f"Błąd przetwarzania CSV: {e}")
+        return []
+
+def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=True, koszt_pakowania=0):
+    """Oblicza marżę dla pojedynczego produktu"""
+    koszt_pakowania = zamien_przecinek_na_kropke(koszt_pakowania) if koszt_pakowania else 0
+    
+    if kategoria == "A":
+        prowizja = cena_sprzedazy * 0.0615
+    elif kategoria == "B":
+        prowizja = cena_sprzedazy * 0.1292
+    elif kategoria == "C":
+        prowizja = cena_sprzedazy * 0.1292
+    elif kategoria == "D":
+        prowizja = cena_sprzedazy * 0.1353
+    elif kategoria == "E":
+        prowizja = cena_sprzedazy * 0.0555
+    elif kategoria == "F":
+        if cena_sprzedazy <= 60:
+            prowizja = cena_sprzedazy * 0.1845
+        else:
+            prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
+    elif kategoria == "G":
+        prowizja = cena_sprzedazy * 0.01
+    else:
+        prowizja = cena_sprzedazy * 0.1
+    
+    if czy_smart and kategoria != "G":
+        # Dla trybu smart uwzględniamy koszty dostawy
+        if cena_sprzedazy < 30:
+            dostawa = 0
+        elif 30 <= cena_sprzedazy < 45:
+            dostawa = 1.99
+        elif 45 <= cena_sprzedazy < 65:
+            dostawa = 3.99
+        elif 65 <= cena_sprzedazy < 100:
+            dostawa = 5.79
+        elif 100 <= cena_sprzedazy < 150:
+            dostawa = 9.09
+        else:
+            dostawa = 11.49
+    else:
+        dostawa = 0
+    
+    marza_netto = cena_sprzedazy - cena_zakupu - prowizja - dostawa - koszt_pakowania
+    marza_procent = (marza_netto / cena_zakupu * 100) if cena_zakupu > 0 else 0
+    
+    return {
+        'prowizja': prowizja,
+        'dostawa': dostawa,
+        'marza_netto': marza_netto,
+        'marza_procent': marza_procent,
+        'koszt_pakowania': koszt_pakowania
+    }
 
 def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     if kategoria == "A":
@@ -1214,6 +1338,68 @@ def porownaj():
         statystyki1=statystyki1,
         statystyki2=statystyki2,
         podobienstwo=podobienstwo
+    )
+
+@app.route("/zbiorczy", methods=["GET", "POST"])
+def zbiorczy():
+    if 'dark_mode' not in session:
+        session['dark_mode'] = False
+        
+    form_zbiorczy = KalkulatorZbiorczyForm()
+    wyniki_zbiorcze = None
+    laczna_marza = 0
+    laczna_cena_zakupu = 0
+    laczna_cena_sprzedazy = 0
+    liczba_produktow = 0
+    
+    if form_zbiorczy.submit_zbiorczy.data and form_zbiorczy.validate():
+        dane_csv = form_zbiorczy.plik_csv.data
+        kategoria = form_zbiorczy.kategoria_zbiorcza.data
+        czy_smart = form_zbiorczy.czy_smart_zbiorcze.data
+        koszt_pakowania = form_zbiorczy.koszt_pakowania_zbiorcze.data
+        
+        produkty = przetworz_dane_zbiorcze(dane_csv, kategoria, czy_smart, koszt_pakowania)
+        
+        if produkty:
+            wyniki = []
+            for produkt in produkty:
+                cena_zakupu = produkt['cena_netto']
+                cena_sprzedazy = produkt['cena_brutto']
+                
+                marza_dane = oblicz_marze_dla_produktu(
+                    cena_zakupu, 
+                    cena_sprzedazy, 
+                    kategoria, 
+                    czy_smart, 
+                    koszt_pakowania
+                )
+                
+                wyniki.append({
+                    'nazwa': produkt['nazwa'],
+                    'cena_zakupu': cena_zakupu,
+                    'cena_sprzedazy': cena_sprzedazy,
+                    'prowizja': marza_dane['prowizja'],
+                    'dostawa': marza_dane['dostawa'],
+                    'marza_netto': marza_dane['marza_netto'],
+                    'marza_procent': marza_dane['marza_procent'],
+                    'koszt_pakowania': marza_dane['koszt_pakowania']
+                })
+                
+                laczna_marza += marza_dane['marza_netto']
+                laczna_cena_zakupu += cena_zakupu
+                laczna_cena_sprzedazy += cena_sprzedazy
+                liczba_produktow += 1
+            
+            wyniki_zbiorcze = wyniki
+
+    return render_template(
+        "zbiorczy.html",
+        form_zbiorczy=form_zbiorczy,
+        wyniki_zbiorcze=wyniki_zbiorcze,
+        laczna_marza=laczna_marza,
+        laczna_cena_zakupu=laczna_cena_zakupu,
+        laczna_cena_sprzedazy=laczna_cena_sprzedazy,
+        liczba_produktow=liczba_produktow
     )
 
 if __name__ == "__main__":
