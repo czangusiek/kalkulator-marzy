@@ -227,10 +227,10 @@
     <div class="kalkulator">
         <h2>Oblicz marże dla wielu produktów</h2>
         <form method="POST" enctype="multipart/form-data">
-            {{ form_zbiorczy.hidden_tag() }}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <label for="plik_csv">Prześlij plik CSV:</label>
-            {{ form_zbiorczy.plik_csv() }}
+            <input type="file" id="plik_csv" name="plik_csv" accept=".csv,.txt">
             
             <div class="przyklad-csv">
                 <strong>Wymagany format pliku CSV:</strong><br>
@@ -250,17 +250,28 @@
             </div>
             
             <label for="kategoria_zbiorcza">Kategoria:</label>
-            {{ form_zbiorczy.kategoria_zbiorcza() }}
+            <select id="kategoria_zbiorcza" name="kategoria_zbiorcza">
+                <option value="A">Supermarket (6,15%)</option>
+                <option value="B">Cukier (12,92%)</option>
+                <option value="C">Chemia gospodarcza (12,92%)</option>
+                <option value="D">AGD zwykłe (13,53%)</option>
+                <option value="E">Elektronika (5,55%)</option>
+                <option value="F">Chemia do 60 zł (18,45% / 9,84%)</option>
+                <option value="G">Sklep internetowy</option>
+                <option value="H">Inna prowizja</option>
+                <option value="I">Strefa okazji (+60% prowizji podstawowej)</option>
+            </select>
             
             <label>
-                {{ form_zbiorczy.czy_smart_zbiorcze() }} Czy smart?
+                <input type="checkbox" id="czy_smart_zbiorcze" name="czy_smart_zbiorcze" checked>
+                Czy smart?
             </label>
             
             <label for="koszt_pakowania_zbiorcze">Koszt pakowania na sztukę (zł):</label>
-            {{ form_zbiorczy.koszt_pakowania_zbiorcze(value="0") }}
+            <input type="text" id="koszt_pakowania_zbiorcze" name="koszt_pakowania_zbiorcze" value="0">
             
             <br>
-            {{ form_zbiorczy.submit_zbiorczy() }}
+            <input type="submit" name="submit_zbiorczy" value="Oblicz marże zbiorczo">
         </form>
 
         {% if error_message %}

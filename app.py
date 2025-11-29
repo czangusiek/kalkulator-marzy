@@ -163,89 +163,115 @@ def zamien_przecinek_na_kropke(liczba):
     return liczba
 
 def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
-    """Przetwarza przesłany plik CSV i oblicza marże dla każdego produktu"""
+    """Przetwarza przesłany plik CSV - wersja dla Render"""
     try:
-        # Sprawdź rozszerzenie pliku
-        filename = secure_filename(plik_csv.filename)
-        if not (filename.endswith('.csv') or filename.endswith('.txt')):
-            return None, "Dozwolone są tylko pliki CSV lub TXT"
-        
-        # Odczytaj zawartość pliku
+        # Odczytaj zawartość pliku bez zapisywania na dysk
         content = plik_csv.read()
         
+        if not content:
+            return None, "Plik jest pusty"
+        
+        # Debug - sprawdź co jest w pliku
+        print(f"DEBUG: Rozmiar pliku: {len(content)} bajtów")
+        print(f"DEBUG: Pierwsze 200 znaków: {content[:200]}")
+        
         # Spróbuj różnych encodingów
-        for encoding in ['utf-8-sig', 'utf-8', 'cp1250', 'iso-8859-2']:
+        for encoding in ['utf-8-sig', 'utf-8', 'cp1250', 'iso-8859-2', 'windows-1250']:
             try:
                 content_decoded = content.decode(encoding)
+                print(f"DEBUG: Udało się z encoding: {encoding}")
                 break
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as e:
+                print(f"DEBUG: Błąd z {encoding}: {e}")
                 continue
         else:
-            return None, "Błąd kodowania pliku - użyj UTF-8"
+            return None, "Nie można odczytać pliku - sprawdź kodowanie (UTF-8 recommended)"
         
         # Spróbuj różnych separatorów
         for delimiter in [';', ',', '\t']:
             try:
                 csv_data = io.StringIO(content_decoded)
-                reader = csv.DictReader(csv_data, delimiter=delimiter)
-                if reader.fieldnames:
-                    break
-            except:
+                # Sprawdź czy plik ma nagłówki
+                sample = csv_data.read(500)
+                csv_data.seek(0)
+                
+                if delimiter in sample:
+                    reader = csv.DictReader(csv_data, delimiter=delimiter)
+                    if reader.fieldnames:
+                        print(f"DEBUG: Udało się z delimiter: {delimiter}")
+                        print(f"DEBUG: Nagłówki: {reader.fieldnames}")
+                        break
+            except Exception as e:
+                print(f"DEBUG: Błąd z delimiter {delimiter}: {e}")
                 continue
         else:
-            return None, "Nieprawidłowy format CSV"
-        
+            return None, "Nieprawidłowy format CSV - użyj średników (;) lub przecinków (,)"
+
         produkty = []
-        for row in reader:
-            # Szukamy kolumn z cenami (case insensitive i z polskimi znakami)
+        for row_num, row in enumerate(reader, 1):
+            print(f"DEBUG: Przetwarzanie wiersza {row_num}: {row}")
+            
+            # Szukamy kolumn z cenami
             cena_netto = None
             cena_brutto = None
             nazwa = ""
-            lp = ""
+            lp = str(row_num)
             
             for key, value in row.items():
                 if value is None:
                     continue
                     
                 key_lower = key.lower().strip()
-                value = str(value).strip()
+                value_str = str(value).strip() if value else ""
                 
+                if not value_str:
+                    continue
+                    
                 if 'lp' in key_lower or 'l.p' in key_lower or 'nr' in key_lower:
-                    lp = value
-                elif 'nazwa' in key_lower or 'produkt' in key_lower or 'nazwa' in key_lower:
-                    nazwa = value
+                    lp = value_str
+                elif 'nazwa' in key_lower or 'produkt' in key_lower or 'nazwa' in key_lower or 'product' in key_lower:
+                    nazwa = value_str
                 elif 'netto' in key_lower:
                     try:
-                        # Usuń zł, PLN itp. i zamień przecinki na kropki
-                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cleaned_value = value_str.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
                         cena_netto = float(cleaned_value) if cleaned_value else None
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as e:
+                        print(f"DEBUG: Błąd konwersji netto: {e}")
                         cena_netto = None
                 elif 'brutto' in key_lower:
                     try:
-                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cleaned_value = value_str.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
                         cena_brutto = float(cleaned_value) if cleaned_value else None
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as e:
+                        print(f"DEBUG: Błąd konwersji brutto: {e}")
                         cena_brutto = None
                 elif 'cena' in key_lower and cena_netto is None and cena_brutto is None:
-                    # Jeśli jest tylko kolumna "cena", traktuj jako brutto
                     try:
-                        cleaned_value = value.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
+                        cleaned_value = value_str.replace('zł', '').replace('PLN', '').replace(' ', '').replace(',', '.')
                         cena_brutto = float(cleaned_value) if cleaned_value else None
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as e:
+                        print(f"DEBUG: Błąd konwersji cena: {e}")
                         cena_brutto = None
             
-            # Jeśli nie znaleziono nazwy, pomiń wiersz
+            # Jeśli nie znaleziono nazwy, spróbuj użyć pierwszej niepustej kolumny
             if not nazwa:
+                for key, value in row.items():
+                    if value and str(value).strip():
+                        nazwa = str(value).strip()
+                        break
+            
+            if not nazwa:
+                print(f"DEBUG: Pominięto wiersz {row_num} - brak nazwy")
                 continue
             
             # Oblicz brakującą cenę
             if cena_netto is not None and cena_brutto is None:
-                cena_brutto = cena_netto * 1.23  # domyślnie 23% VAT
+                cena_brutto = cena_netto * 1.23
             elif cena_brutto is not None and cena_netto is None:
                 cena_netto = cena_brutto / 1.23
             elif cena_netto is None and cena_brutto is None:
-                continue  # Pomijamy jeśli brak obu cen
+                print(f"DEBUG: Pominięto wiersz {row_num} - brak cen")
+                continue
             
             produkty.append({
                 'lp': lp,
@@ -254,10 +280,11 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
                 'cena_brutto': cena_brutto
             })
         
+        print(f"DEBUG: Znaleziono {len(produkty)} produktów")
         return produkty, None
         
     except Exception as e:
-        print(f"Błąd przetwarzania pliku: {e}")
+        print(f"DEBUG: Błąd przetwarzania pliku: {e}")
         return None, f"Błąd przetwarzania pliku: {str(e)}"
 
 def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=True, koszt_pakowania=0):
@@ -1392,7 +1419,6 @@ def zbiorczy():
     if 'dark_mode' not in session:
         session['dark_mode'] = False
         
-    form_zbiorczy = KalkulatorZbiorczyForm()
     wyniki_zbiorcze = None
     laczna_marza = 0
     laczna_cena_zakupu = 0
@@ -1400,17 +1426,25 @@ def zbiorczy():
     liczba_produktow = 0
     error_message = None
     
-    if form_zbiorczy.submit_zbiorczy.data and form_zbiorczy.validate():
+    if request.method == "POST" and 'submit_zbiorczy' in request.form:
+        print("DEBUG: Formularz przesłany!")
+        
         plik_csv = request.files.get('plik_csv')
-        kategoria = form_zbiorczy.kategoria_zbiorcza.data
-        czy_smart = form_zbiorczy.czy_smart_zbiorcze.data
-        koszt_pakowania = form_zbiorczy.koszt_pakowania_zbiorcze.data
+        kategoria = request.form.get('kategoria_zbiorcza', 'A')
+        czy_smart = 'czy_smart_zbiorcze' in request.form
+        koszt_pakowania = request.form.get('koszt_pakowania_zbiorcze', '0')
+        
+        print(f"DEBUG: Plik: {plik_csv}")
+        print(f"DEBUG: Kategoria: {kategoria}")
+        print(f"DEBUG: Smart: {czy_smart}")
+        print(f"DEBUG: Pakowanie: {koszt_pakowania}")
         
         if plik_csv and plik_csv.filename:
             produkty, error = przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania)
             
             if error:
                 error_message = error
+                print(f"DEBUG: Błąd: {error}")
             elif produkty:
                 wyniki = []
                 for produkt in produkty:
@@ -1443,12 +1477,13 @@ def zbiorczy():
                     liczba_produktow += 1
                 
                 wyniki_zbiorcze = wyniki
+                print(f"DEBUG: Przetworzono {liczba_produktow} produktów")
         else:
             error_message = "Proszę wybrać plik do przesłania"
+            print("DEBUG: Brak pliku")
 
     return render_template(
         "zbiorczy.html",
-        form_zbiorczy=form_zbiorczy,
         wyniki_zbiorcze=wyniki_zbiorcze,
         laczna_marza=laczna_marza,
         laczna_cena_zakupu=laczna_cena_zakupu,
