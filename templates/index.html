@@ -398,6 +398,7 @@
                 <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji()">▼ Więcej opcji</button>
                 
                 <div id="wiecej-opcji" class="wiecej-opcji">
+                    <!-- PRZENIESIONE pola inna_prowizja i kategoria_podstawowa na początek -->
                     <div id="inna-prowizja-div" class="inna-prowizja">
                         <label for="inna_prowizja">Procent prowizji:</label>
                         {{ form_marza.inna_prowizja(size=20) }}
@@ -1010,7 +1011,7 @@
             for (let cena = cenaZakupu; cena <= cenaZakupu * 3; cena += krok) {
                 cenySprzedazy.push(cena);
                 
-                // Oblicz marżę dla danej ceny
+                // Oblicz marżę dla danej cena
                 let marza = 0;
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cena, false);
@@ -1170,11 +1171,37 @@
             }
         }
 
+        // DODANA: Funkcja do inicjalizacji listenerów dla kategorii
+        function initKategoriaListeners() {
+            const kategoriaEl = document.getElementById('kategoria');
+            if (kategoriaEl) {
+                kategoriaEl.addEventListener('change', function() {
+                    toggleInnaProwizja();
+                    // Upewnij się, że pola są widoczne/niewidoczne
+                    const kategoriaValue = this.value;
+                    const innaProwizjaInput = document.getElementById('inna_prowizja');
+                    const kategoriaPodstawowaSelect = document.getElementById('kategoria_podstawowa');
+                    
+                    if (kategoriaValue === 'H') {
+                        if (innaProwizjaInput) innaProwizjaInput.value = '';
+                    } else if (kategoriaValue === 'I') {
+                        if (kategoriaPodstawowaSelect) kategoriaPodstawowaSelect.value = 'A';
+                    }
+                });
+                
+                // Wywołaj na starcie
+                toggleInnaProwizja();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
             document.body.classList.toggle('dark-mode', darkMode);
             updateColors(darkMode);
-            toggleInnaProwizja();
+            
+            // DODANE: Inicjalizacja listenerów dla kategorii
+            initKategoriaListeners();
+            
             toggleTrybSmart();
             toggleWaluta('towar');
             toggleWaluta('dostawa');
