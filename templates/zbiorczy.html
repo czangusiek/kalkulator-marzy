@@ -227,7 +227,9 @@
     <div class="kalkulator">
         <h2>Oblicz marże dla wielu produktów</h2>
         <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- USUNIĘTO: <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/> -->
+            <!-- Dodano prosty hidden field dla identyfikacji -->
+            <input type="hidden" name="form_type" value="zbiorczy">
             
             <label for="plik_csv">Prześlij plik CSV:</label>
             <input type="file" id="plik_csv" name="plik_csv" accept=".csv,.txt">

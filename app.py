@@ -1426,61 +1426,76 @@ def zbiorczy():
     liczba_produktow = 0
     error_message = None
     
-    if request.method == "POST" and 'submit_zbiorczy' in request.form:
-        print("DEBUG: Formularz przesłany!")
+    print("DEBUG: Zbiorczy endpoint called")
+    print(f"DEBUG: Request method: {request.method}")
+    
+    if request.method == "POST":
+        print("DEBUG: POST request detected")
+        print(f"DEBUG: Form data: {request.form}")
+        print(f"DEBUG: Files: {request.files}")
         
-        plik_csv = request.files.get('plik_csv')
-        kategoria = request.form.get('kategoria_zbiorcza', 'A')
-        czy_smart = 'czy_smart_zbiorcze' in request.form
-        koszt_pakowania = request.form.get('koszt_pakowania_zbiorcze', '0')
-        
-        print(f"DEBUG: Plik: {plik_csv}")
-        print(f"DEBUG: Kategoria: {kategoria}")
-        print(f"DEBUG: Smart: {czy_smart}")
-        print(f"DEBUG: Pakowanie: {koszt_pakowania}")
-        
-        if plik_csv and plik_csv.filename:
-            produkty, error = przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania)
+        # Sprawdź czy to nasz formularz
+        if 'submit_zbiorczy' in request.form:
+            print("DEBUG: Submit zbiorczy found!")
             
-            if error:
-                error_message = error
-                print(f"DEBUG: Błąd: {error}")
-            elif produkty:
-                wyniki = []
-                for produkt in produkty:
-                    cena_zakupu = produkt['cena_netto']
-                    cena_sprzedazy = produkt['cena_brutto']
-                    
-                    marza_dane = oblicz_marze_dla_produktu(
-                        cena_zakupu, 
-                        cena_sprzedazy, 
-                        kategoria, 
-                        czy_smart, 
-                        koszt_pakowania
-                    )
-                    
-                    wyniki.append({
-                        'lp': produkt['lp'],
-                        'nazwa': produkt['nazwa'],
-                        'cena_zakupu': cena_zakupu,
-                        'cena_sprzedazy': cena_sprzedazy,
-                        'prowizja': marza_dane['prowizja'],
-                        'dostawa': marza_dane['dostawa'],
-                        'marza_netto': marza_dane['marza_netto'],
-                        'marza_procent': marza_dane['marza_procent'],
-                        'koszt_pakowania': marza_dane['koszt_pakowania']
-                    })
-                    
-                    laczna_marza += marza_dane['marza_netto']
-                    laczna_cena_zakupu += cena_zakupu
-                    laczna_cena_sprzedazy += cena_sprzedazy
-                    liczba_produktow += 1
+            plik_csv = request.files.get('plik_csv')
+            kategoria = request.form.get('kategoria_zbiorcza', 'A')
+            czy_smart = 'czy_smart_zbiorcze' in request.form
+            koszt_pakowania = request.form.get('koszt_pakowania_zbiorcze', '0')
+            
+            print(f"DEBUG: Plik: {plik_csv}")
+            print(f"DEBUG: Kategoria: {kategoria}")
+            print(f"DEBUG: Smart: {czy_smart}")
+            print(f"DEBUG: Pakowanie: {koszt_pakowania}")
+            
+            if plik_csv and plik_csv.filename:
+                print(f"DEBUG: Przetwarzanie pliku: {plik_csv.filename}")
+                produkty, error = przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania)
                 
-                wyniki_zbiorcze = wyniki
-                print(f"DEBUG: Przetworzono {liczba_produktow} produktów")
+                if error:
+                    error_message = error
+                    print(f"DEBUG: Błąd przetwarzania: {error}")
+                elif produkty:
+                    print(f"DEBUG: Znaleziono {len(produkty)} produktów")
+                    wyniki = []
+                    for produkt in produkty:
+                        cena_zakupu = produkt['cena_netto']
+                        cena_sprzedazy = produkt['cena_brutto']
+                        
+                        marza_dane = oblicz_marze_dla_produktu(
+                            cena_zakupu, 
+                            cena_sprzedazy, 
+                            kategoria, 
+                            czy_smart, 
+                            koszt_pakowania
+                        )
+                        
+                        wyniki.append({
+                            'lp': produkt['lp'],
+                            'nazwa': produkt['nazwa'],
+                            'cena_zakupu': cena_zakupu,
+                            'cena_sprzedazy': cena_sprzedazy,
+                            'prowizja': marza_dane['prowizja'],
+                            'dostawa': marza_dane['dostawa'],
+                            'marza_netto': marza_dane['marza_netto'],
+                            'marza_procent': marza_dane['marza_procent'],
+                            'koszt_pakowania': marza_dane['koszt_pakowania']
+                        })
+                        
+                        laczna_marza += marza_dane['marza_netto']
+                        laczna_cena_zakupu += cena_zakupu
+                        laczna_cena_sprzedazy += cena_sprzedazy
+                        liczba_produktow += 1
+                    
+                    wyniki_zbiorcze = wyniki
+                    print(f"DEBUG: Przetworzono {liczba_produktow} produktów")
+            else:
+                error_message = "Proszę wybrać plik do przesłania"
+                print("DEBUG: Brak pliku")
         else:
-            error_message = "Proszę wybrać plik do przesłania"
-            print("DEBUG: Brak pliku")
+            print("DEBUG: Nie znaleziono submit_zbiorczy w formularzu")
+    else:
+        print("DEBUG: GET request")
 
     return render_template(
         "zbiorczy.html",
