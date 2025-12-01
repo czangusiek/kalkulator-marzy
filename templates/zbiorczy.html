@@ -40,7 +40,7 @@
             transition: all 0.3s ease;
             font-family: Arial, sans-serif;
             padding: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -123,32 +123,45 @@
         .wynik th, .wynik td {
             border: 1px solid var(--table-border);
             padding: 8px;
-            text-align: left;
+            text-align: center;
         }
         .wynik th {
             background-color: var(--table-header-bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .podsumowanie {
             background-color: var(--table-header-bg);
-            padding: 15px;
+            padding: 20px;
             border-radius: 5px;
             margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 15px;
         }
 
         .stat-box {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 0 10px;
+            padding: 15px 25px;
             background-color: var(--container-bg);
             border-radius: 5px;
             text-align: center;
+            min-width: 200px;
+            flex: 1;
         }
 
         .stat-value {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
             color: var(--green-color);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-color);
+            margin-bottom: 5px;
         }
 
         .dark-mode-toggle {
@@ -209,6 +222,48 @@
             margin-left: 5px;
             display: none;
         }
+
+        .tabela-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid var(--table-border);
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .parametry-obliczen {
+            background-color: var(--table-header-bg);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .parametry-obliczen h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--blue-color);
+        }
+
+        @media (max-width: 768px) {
+            .tabela-container {
+                max-height: 400px;
+            }
+            
+            .stat-box {
+                min-width: 150px;
+                padding: 10px 15px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .wynik th, .wynik td {
+                padding: 4px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -252,24 +307,24 @@
             
             <label for="kategoria_zbiorcza">Kategoria:</label>
             <select id="kategoria_zbiorcza" name="kategoria_zbiorcza">
-                <option value="A">Supermarket (6,15%)</option>
-                <option value="B">Cukier (12,92%)</option>
-                <option value="C">Chemia gospodarcza (12,92%)</option>
-                <option value="D">AGD zwykłe (13,53%)</option>
-                <option value="E">Elektronika (5,55%)</option>
-                <option value="F">Chemia do 60 zł (18,45% / 9,84%)</option>
-                <option value="G">Sklep internetowy</option>
-                <option value="H">Inna prowizja</option>
-                <option value="I">Strefa okazji (+60% prowizji podstawowej)</option>
+                <option value="A" {% if kategoria_zbiorcza == 'A' %}selected{% endif %}>Supermarket (6,15%)</option>
+                <option value="B" {% if kategoria_zbiorcza == 'B' %}selected{% endif %}>Cukier (12,92%)</option>
+                <option value="C" {% if kategoria_zbiorcza == 'C' %}selected{% endif %}>Chemia gospodarcza (12,92%)</option>
+                <option value="D" {% if kategoria_zbiorcza == 'D' %}selected{% endif %}>AGD zwykłe (13,53%)</option>
+                <option value="E" {% if kategoria_zbiorcza == 'E' %}selected{% endif %}>Elektronika (5,55%)</option>
+                <option value="F" {% if kategoria_zbiorcza == 'F' %}selected{% endif %}>Chemia do 60 zł (18,45% / 9,84%)</option>
+                <option value="G" {% if kategoria_zbiorcza == 'G' %}selected{% endif %}>Sklep internetowy</option>
+                <option value="H" {% if kategoria_zbiorcza == 'H' %}selected{% endif %}>Inna prowizja</option>
+                <option value="I" {% if kategoria_zbiorcza == 'I' %}selected{% endif %}>Strefa okazji (+60% prowizji podstawowej)</option>
             </select>
             
             <label>
-                <input type="checkbox" id="czy_smart_zbiorcze" name="czy_smart_zbiorcze" checked>
+                <input type="checkbox" id="czy_smart_zbiorcze" name="czy_smart_zbiorcze" {% if czy_smart_zbiorcze %}checked{% endif %}>
                 Czy smart?
             </label>
             
             <label for="koszt_pakowania_zbiorcze">Koszt pakowania na sztukę (zł):</label>
-            <input type="text" id="koszt_pakowania_zbiorcze" name="koszt_pakowania_zbiorcze" value="0">
+            <input type="text" id="koszt_pakowania_zbiorcze" name="koszt_pakowania_zbiorcze" value="{{ koszt_pakowania_zbiorcze }}">
             
             <br>
             <input type="submit" name="submit_zbiorczy" value="Oblicz marże zbiorczo">
@@ -283,97 +338,159 @@
     </div>
 
     {% if wyniki_zbiorcze %}
+    <div class="parametry-obliczen">
+        <h4>Parametry obliczeń:</h4>
+        <p><strong>Kategoria:</strong> 
+            {% if kategoria_zbiorcza == 'A' %}Supermarket (6,15%)
+            {% elif kategoria_zbiorcza == 'B' %}Cukier (12,92%)
+            {% elif kategoria_zbiorcza == 'C' %}Chemia gospodarcza (12,92%)
+            {% elif kategoria_zbiorcza == 'D' %}AGD zwykłe (13,53%)
+            {% elif kategoria_zbiorcza == 'E' %}Elektronika (5,55%)
+            {% elif kategoria_zbiorcza == 'F' %}Chemia do 60 zł (18,45% / 9,84%)
+            {% elif kategoria_zbiorcza == 'G' %}Sklep internetowy
+            {% elif kategoria_zbiorcza == 'H' %}Inna prowizja
+            {% elif kategoria_zbiorcza == 'I' %}Strefa okazji (+60% prowizji podstawowej)
+            {% endif %}
+        </p>
+        <p><strong>Tryb:</strong> {{ 'Smart' if czy_smart_zbiorcze else 'Nie-smart' }}</p>
+        <p><strong>Koszt pakowania:</strong> {{ koszt_pakowania_zbiorcze }} zł/szt</p>
+    </div>
+
     <div class="podsumowanie">
-        <h3>Podsumowanie zbiorcze</h3>
         <div class="stat-box">
-            <div>Łączna marża</div>
-            <div class="stat-value">{{ "%.2f"|format(laczna_marza) }} zł</div>
+            <div class="stat-label">Łączna marża min</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_marza_min) }} zł</div>
         </div>
         <div class="stat-box">
-            <div>Średnia marża/szt</div>
-            <div class="stat-value">{{ "%.2f"|format(laczna_marza/liczba_produktow if liczba_produktow > 0 else 0) }} zł</div>
+            <div class="stat-label">Łączna marża max</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_marza_max) }} zł</div>
         </div>
         <div class="stat-box">
-            <div>Łączny zakup</div>
+            <div class="stat-label">Łączna marża najgorsza</div>
+            <div class="stat-value">{{ "%.2f"|format(laczna_marza_najgorsza) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Średnia marża/szt</div>
+            <div class="stat-value">{{ "%.2f"|format((laczna_marza_min + laczna_marza_max) / 2 / liczba_produktow if liczba_produktow > 0 else 0) }} zł</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Łączny zakup</div>
             <div class="stat-value">{{ "%.2f"|format(laczna_cena_zakupu) }} zł</div>
         </div>
         <div class="stat-box">
-            <div>Łączna sprzedaż</div>
+            <div class="stat-label">Łączna sprzedaż</div>
             <div class="stat-value">{{ "%.2f"|format(laczna_cena_sprzedazy) }} zł</div>
         </div>
         <div class="stat-box">
-            <div>Liczba produktów</div>
+            <div class="stat-label">Liczba produktów</div>
             <div class="stat-value">{{ liczba_produktow }}</div>
         </div>
     </div>
 
-    <div class="wynik">
-        <h3>Szczegółowe wyniki</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>LP</th>
-                    <th>Nazwa produktu</th>
-                    <th>Cena zakupu</th>
-                    <th>Cena sprzedaży</th>
-                    <th>Prowizja</th>
-                    <th>Dostawa</th>
-                    <th>Pakowanie</th>
-                    <th>Marża netto</th>
-                    <th>Marża %</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for wynik in wyniki_zbiorcze %}
-                <tr>
-                    <td>{{ wynik.lp if wynik.lp else loop.index }}</td>
-                    <td>{{ wynik.nazwa }}</td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.cena_zakupu) }}">
-                            {{ "%.2f"|format(wynik.cena_zakupu) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.cena_sprzedazy) }}">
-                            {{ "%.2f"|format(wynik.cena_sprzedazy) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.prowizja) }}" style="color:var(--red-color);">
-                            {{ "%.2f"|format(wynik.prowizja) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.dostawa) }}" style="color:var(--red-color);">
-                            {{ "%.2f"|format(wynik.dostawa) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.koszt_pakowania) }}" style="color:var(--red-color);">
-                            {{ "%.2f"|format(wynik.koszt_pakowania) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.2f"|format(wynik.marza_netto) }}" style="color:var(--green-color);">
-                            {{ "%.2f"|format(wynik.marza_netto) }} zł
-                        </span>
-                    </td>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{{ "%.1f"|format(wynik.marza_procent) }}" style="color:var(--blue-color);">
-                            {{ "%.1f"|format(wynik.marza_procent) }}%
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <h3>Szczegółowe wyniki</h3>
+    <div class="tabela-container">
+        <div class="wynik">
+            <table>
+                <thead>
+                    <tr>
+                        <th>LP</th>
+                        <th>Nazwa produktu</th>
+                        <th>Cena zakupu</th>
+                        <th>Cena sprzedaży</th>
+                        <th>Prowizja</th>
+                        <th>Dostawa (przedział)</th>
+                        <th>Marża (przedział)</th>
+                        <th>Marża najgorsza</th>
+                        <th>Marża % (przedział)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wynik in wyniki_zbiorcze %}
+                    <tr>
+                        <td>{{ wynik.lp if wynik.lp else loop.index }}</td>
+                        <td style="text-align: left;">{{ wynik.nazwa }}</td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{{ "%.2f"|format(wynik.cena_zakupu) }}">
+                                {{ "%.2f"|format(wynik.cena_zakupu) }} zł
+                            </span>
+                        </td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{{ "%.2f"|format(wynik.cena_sprzedazy) }}">
+                                {{ "%.2f"|format(wynik.cena_sprzedazy) }} zł
+                            </span>
+                        </td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{{ "%.2f"|format(wynik.prowizja) }}" style="color:var(--red-color);">
+                                {{ "%.2f"|format(wynik.prowizja) }} zł
+                            </span>
+                        </td>
+                        <td>
+                            {% if wynik.dostawa_min == wynik.dostawa_max %}
+                                {{ "%.2f"|format(wynik.dostawa_min) }} zł
+                            {% else %}
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{{ "%.2f"|format(wynik.dostawa_min) }} - {{ "%.2f"|format(wynik.dostawa_max) }}"
+                                      style="color:var(--blue-color);">
+                                    {{ "%.2f"|format(wynik.dostawa_min) }} - {{ "%.2f"|format(wynik.dostawa_max) }} zł
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if wynik.marza_min == wynik.marza_max %}
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{{ "%.2f"|format(wynik.marza_min) }}" style="color:var(--green-color);">
+                                    {{ "%.2f"|format(wynik.marza_min) }} zł
+                                </span>
+                            {% else %}
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{{ "%.2f"|format(wynik.marza_min) }} - {{ "%.2f"|format(wynik.marza_max) }}"
+                                      style="color:var(--green-color);">
+                                    {{ "%.2f"|format(wynik.marza_min) }} - {{ "%.2f"|format(wynik.marza_max) }} zł
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{{ "%.2f"|format(wynik.marza_najgorsza) }}" style="color:var(--orange-color);">
+                                {{ "%.2f"|format(wynik.marza_najgorsza) }} zł
+                            </span>
+                        </td>
+                        <td>
+                            {% if wynik.marza_procent_min == wynik.marza_procent_max %}
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{{ "%.1f"|format(wynik.marza_procent_min) }}" style="color:var(--blue-color);">
+                                    {{ "%.1f"|format(wynik.marza_procent_min) }}%
+                                </span>
+                            {% else %}
+                                <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                      data-value="{{ "%.1f"|format(wynik.marza_procent_min) }} - {{ "%.1f"|format(wynik.marza_procent_max) }}"
+                                      style="color:var(--blue-color);">
+                                    {{ "%.1f"|format(wynik.marza_procent_min) }} - {{ "%.1f"|format(wynik.marza_procent_max) }}%
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="przyklad-csv">
+        <strong>Legenda:</strong>
+        <ul>
+            <li><strong>Dostawa (przedział):</strong> minimalny i maksymalny koszt dostawy dla różnych przewoźników</li>
+            <li><strong>Marża (przedział):</strong> marża minimalna (z najdroższą dostawą) i maksymalna (z najtańszą dostawą)</li>
+            <li><strong>Marża najgorsza:</strong> marża w najgorszym przypadku (z dostawą maksymalną)</li>
+            <li><strong>Marża % (przedział):</strong> procent marży minimalnej i maksymalnej w stosunku do ceny zakupu</li>
+            <li><span style="color:var(--red-color);">●</span> Koszty (prowizja)</li>
+            <li><span style="color:var(--green-color);">●</span> Marża dodatnia</li>
+            <li><span style="color:var(--orange-color);">●</span> Marża w najgorszym przypadku</li>
+            <li><span style="color:var(--blue-color);">●</span> Procenty</li>
+        </ul>
     </div>
     {% endif %}
 

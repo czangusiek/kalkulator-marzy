@@ -390,9 +390,10 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
         return None, f"Błąd przetwarzania pliku: {str(e)}"
 
 def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=True, koszt_pakowania=0):
-    """Oblicza marżę dla pojedynczego produktu"""
+    """Oblicza marżę dla pojedynczego produktu - ulepszona wersja z przedziałami"""
     koszt_pakowania = zamien_przecinek_na_kropke(koszt_pakowania) if koszt_pakowania else 0
     
+    # Oblicz prowizję
     if kategoria == "A":
         prowizja = cena_sprzedazy * 0.0615
     elif kategoria == "B":
@@ -413,33 +414,64 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
     else:
         prowizja = cena_sprzedazy * 0.1
     
+    # Oblicz dostawę
     if czy_smart and kategoria != "G":
-        # Dla trybu smart uwzględniamy koszty dostawy
+        # Dla trybu smart obliczamy przedział kosztów dostawy
         if cena_sprzedazy < 30:
-            dostawa = 0
+            dostawa_min = 0
+            dostawa_max = 0
         elif 30 <= cena_sprzedazy < 45:
-            dostawa = 1.99
+            dostawa_min = 0.99  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 1.99  # Allegro Kurier UPS
         elif 45 <= cena_sprzedazy < 65:
-            dostawa = 3.99
+            dostawa_min = 1.89  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 3.99  # Allegro Kurier UPS
         elif 65 <= cena_sprzedazy < 100:
-            dostawa = 5.79
+            dostawa_min = 3.59  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 5.79  # Allegro Kurier UPS
         elif 100 <= cena_sprzedazy < 150:
-            dostawa = 9.09
-        else:
-            dostawa = 11.49
+            dostawa_min = 5.89  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 9.09  # Allegro Kurier UPS
+        else:  # cena_sprzedazy >= 150
+            dostawa_min = 7.79  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 11.49  # Allegro Kurier UPS
+        
+        # Marża maksymalna (z najtańszą dostawą)
+        marza_max = cena_sprzedazy - cena_zakupu - prowizja - dostawa_min - koszt_pakowania
+        
+        # Marża minimalna (z najdroższą dostawą)
+        marza_min = cena_sprzedazy - cena_zakupu - prowizja - dostawa_max - koszt_pakowania
+        
+        # Marża w najgorszym przypadku (dostawa maksymalna)
+        marza_najgorsza = marza_min
+        
+        return {
+            'prowizja': prowizja,
+            'dostawa_min': dostawa_min,
+            'dostawa_max': dostawa_max,
+            'marza_min': marza_min,
+            'marza_max': marza_max,
+            'marza_najgorsza': marza_najgorsza,
+            'marza_procent_min': (marza_min / cena_zakupu * 100) if cena_zakupu > 0 else 0,
+            'marza_procent_max': (marza_max / cena_zakupu * 100) if cena_zakupu > 0 else 0,
+            'koszt_pakowania': koszt_pakowania
+        }
     else:
+        # Dla trybu nie-smart lub kategorii G
         dostawa = 0
-    
-    marza_netto = cena_sprzedazy - cena_zakupu - prowizja - dostawa - koszt_pakowania
-    marza_procent = (marza_netto / cena_zakupu * 100) if cena_zakupu > 0 else 0
-    
-    return {
-        'prowizja': prowizja,
-        'dostawa': dostawa,
-        'marza_netto': marza_netto,
-        'marza_procent': marza_procent,
-        'koszt_pakowania': koszt_pakowania
-    }
+        marza = cena_sprzedazy - cena_zakupu - prowizja - koszt_pakowania
+        
+        return {
+            'prowizja': prowizja,
+            'dostawa_min': dostawa,
+            'dostawa_max': dostawa,
+            'marza_min': marza,
+            'marza_max': marza,
+            'marza_najgorsza': marza,
+            'marza_procent_min': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0,
+            'marza_procent_max': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0,
+            'koszt_pakowania': koszt_pakowania
+        }
 
 def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     if kategoria == "A":
@@ -1389,42 +1421,42 @@ def index():
                 </tr>
                 <tr>
                     <th>Cena netto za sztukę:</th>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{cena_netto_za_sztuke:.2f}" style="color:var(--blue-color);">
-                            {cena_netto_za_sztuke:.2f} zł
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Koszt dostawy na sztukę:</th>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">
-                            {koszt_dostawy_sztuka:.2f} zł
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Cena brutto całkowita:</th>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{cena_brutto_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
-                            {(cena_brutto_za_sztuke * ilosc_sztuk):.2f} zł
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Cena brutto z dostawą całkowita:</th>
-                    <td>
-                        <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                              data-value="{cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
-                            {(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.2f} zł
-                        </span>
-                    </td>
-                </tr>
-            </table>
-        </div>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{cena_netto_za_sztuke:.2f}" style="color:var(--blue-color);">
+                                {cena_netto_za_sztuke:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Koszt dostawy na sztukę:</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">
+                                {koszt_dostawy_sztuka:.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Cena brutto całkowita:</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{cena_brutto_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
+                                {(cena_brutto_za_sztuke * ilosc_sztuk):.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Cena brutto z dostawą całkowita:</th>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
+                                  data-value="{cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">
+                                {(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.2f} zł
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         """
 
     return render_template(
@@ -1522,7 +1554,9 @@ def zbiorczy():
         session['dark_mode'] = False
         
     wyniki_zbiorcze = None
-    laczna_marza = 0
+    laczna_marza_min = 0
+    laczna_marza_max = 0
+    laczna_marza_najgorsza = 0
     laczna_cena_zakupu = 0
     laczna_cena_sprzedazy = 0
     liczba_produktow = 0
@@ -1587,7 +1621,7 @@ def zbiorczy():
                             koszt_pakowania
                         )
                         
-                        print(f"DEBUG: Marza dla {produkt['nazwa']}: {marza_dane['marza_netto']}")
+                        print(f"DEBUG: Marza dla {produkt['nazwa']}: min={marza_dane['marza_min']:.2f}, max={marza_dane['marza_max']:.2f}, najgorsza={marza_dane['marza_najgorsza']:.2f}")
                         
                         wyniki.append({
                             'lp': produkt['lp'],
@@ -1595,20 +1629,28 @@ def zbiorczy():
                             'cena_zakupu': cena_zakupu,
                             'cena_sprzedazy': cena_sprzedazy,
                             'prowizja': marza_dane['prowizja'],
-                            'dostawa': marza_dane['dostawa'],
-                            'marza_netto': marza_dane['marza_netto'],
-                            'marza_procent': marza_dane['marza_procent'],
+                            'dostawa_min': marza_dane['dostawa_min'],
+                            'dostawa_max': marza_dane['dostawa_max'],
+                            'marza_min': marza_dane['marza_min'],
+                            'marza_max': marza_dane['marza_max'],
+                            'marza_najgorsza': marza_dane['marza_najgorsza'],
+                            'marza_procent_min': marza_dane['marza_procent_min'],
+                            'marza_procent_max': marza_dane['marza_procent_max'],
                             'koszt_pakowania': marza_dane['koszt_pakowania']
                         })
                         
-                        laczna_marza += marza_dane['marza_netto']
+                        laczna_marza_min += marza_dane['marza_min']
+                        laczna_marza_max += marza_dane['marza_max']
+                        laczna_marza_najgorsza += marza_dane['marza_najgorsza']
                         laczna_cena_zakupu += cena_zakupu
                         laczna_cena_sprzedazy += cena_sprzedazy
                         liczba_produktow += 1
                     
                     wyniki_zbiorcze = wyniki
                     print(f"DEBUG: Przetworzono {liczba_produktow} produktów")
-                    print(f"DEBUG: Łączna marża: {laczna_marza}")
+                    print(f"DEBUG: Łączna marża min: {laczna_marza_min}")
+                    print(f"DEBUG: Łączna marża max: {laczna_marza_max}")
+                    print(f"DEBUG: Łączna marża najgorsza: {laczna_marza_najgorsza}")
                 else:
                     error_message = "Nie udało się przetworzyć pliku. Sprawdź format."
                     print("DEBUG: Brak produktów w wynikach")
@@ -1627,11 +1669,16 @@ def zbiorczy():
     return render_template(
         "zbiorczy.html",
         wyniki_zbiorcze=wyniki_zbiorcze,
-        laczna_marza=laczna_marza,
+        laczna_marza_min=laczna_marza_min,
+        laczna_marza_max=laczna_marza_max,
+        laczna_marza_najgorsza=laczna_marza_najgorsza,
         laczna_cena_zakupu=laczna_cena_zakupu,
         laczna_cena_sprzedazy=laczna_cena_sprzedazy,
         liczba_produktow=liczba_produktow,
-        error_message=error_message
+        error_message=error_message,
+        kategoria_zbiorcza=request.form.get('kategoria_zbiorcza', 'A') if request.method == 'POST' else 'A',
+        czy_smart_zbiorcze='czy_smart_zbiorcze' in request.form if request.method == 'POST' else True,
+        koszt_pakowania_zbiorcze=request.form.get('koszt_pakowania_zbiorcze', '0') if request.method == 'POST' else '0'
     )
 
 if __name__ == "__main__":
