@@ -414,7 +414,7 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
     else:
         prowizja = cena_sprzedazy * 0.1
     
-    # Oblicz dostawę
+    # Oblicz dostawę ZMIENIONE - zgodnie z nowymi cenami
     if czy_smart and kategoria != "G":
         # Dla trybu smart obliczamy przedział kosztów dostawy
         if cena_sprzedazy < 30:
@@ -424,17 +424,17 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
             dostawa_min = 0.99  # Allegro One Punkt, Orlen Punkt, DHL BOX
             dostawa_max = 1.99  # Allegro Kurier UPS
         elif 45 <= cena_sprzedazy < 65:
-            dostawa_min = 1.89  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_min = 1.99  # Allegro One Punkt, Orlen Punkt, DHL BOX
             dostawa_max = 3.99  # Allegro Kurier UPS
         elif 65 <= cena_sprzedazy < 100:
-            dostawa_min = 3.59  # Allegro One Punkt, Orlen Punkt, DHL BOX
-            dostawa_max = 5.79  # Allegro Kurier UPS
+            dostawa_min = 3.69  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 6.09  # Allegro Kurier UPS
         elif 100 <= cena_sprzedazy < 150:
-            dostawa_min = 5.89  # Allegro One Punkt, Orlen Punkt, DHL BOX
-            dostawa_max = 9.09  # Allegro Kurier UPS
+            dostawa_min = 6.19  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 9.49  # Allegro Kurier UPS
         else:  # cena_sprzedazy >= 150
-            dostawa_min = 7.79  # Allegro One Punkt, Orlen Punkt, DHL BOX
-            dostawa_max = 11.49  # Allegro Kurier UPS
+            dostawa_min = 7.99  # Allegro One Punkt, Orlen Punkt, DHL BOX
+            dostawa_max = 11.89  # Allegro Kurier UPS
         
         # Marża maksymalna (z najtańszą dostawą)
         marza_max = cena_sprzedazy - cena_zakupu - prowizja - dostawa_min - koszt_pakowania
@@ -536,28 +536,31 @@ def oblicz_koszt_wysylki(cena_sprzedazy):
         return 19.90
 
 def oblicz_dostawe_minimalna(cena_sprzedazy):
+    # ZMIENIONE - zgodnie z nowymi cenami
     if 30 <= cena_sprzedazy < 45:
         return 1.99
     elif 45 <= cena_sprzedazy < 65:
         return 3.99
     elif 65 <= cena_sprzedazy < 100:
-        return 5.79
+        return 6.09
     elif 100 <= cena_sprzedazy < 150:
-        return 9.09
+        return 9.49
     elif cena_sprzedazy >= 150:
-        return 11.49
+        return 11.89
     else:
         return 0
 
 def oblicz_dostawe_maksymalna(cena_sprzedazy):
+    # ZMIENIONE - zgodnie z nowymi cenami
     if cena_sprzedazy < 100:
-        return cena_sprzedazy * 0.0909
+        return cena_sprzedazy * 0.0949
     elif 100 <= cena_sprzedazy < 150:
-        return 9.09
+        return 9.49
     else:
-        return 11.49
+        return 11.89
 
 def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
+    # ZMIENIONE - zgodnie z nowymi cenami
     if cena_sprzedazy < 30:
         return {
             'Allegro Paczkomaty InPost': 0,
@@ -572,7 +575,7 @@ def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
     if 30 <= cena_sprzedazy < 45:
         return {
             'Allegro Paczkomaty InPost': 1.59,
-            'Allegro Automat Pocztex': 1.29,
+            'Allegro Automat Pocztex': 1.59,
             'Allegro One Punkt, Orlen Punkt, DHL BOX': 0.99,
             'Allegro Kurier UPS': 1.99,
             'Allegro Kurier DHL (Allegro Delivery)': 1.79,
@@ -581,9 +584,9 @@ def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
         }
     elif 45 <= cena_sprzedazy < 65:
         return {
-            'Allegro Paczkomaty InPost': 3.09,
-            'Allegro Automat Pocztex': 2.49,
-            'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.89,
+            'Allegro Paczkomaty InPost': 3.19,
+            'Allegro Automat Pocztex': 3.19,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.99,
             'Allegro Kurier UPS': 3.99,
             'Allegro Kurier DHL (Allegro Delivery)': 3.69,
             'Allegro Kurier Pocztex': 3.99,
@@ -591,33 +594,33 @@ def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
         }
     elif 65 <= cena_sprzedazy < 100:
         return {
-            'Allegro Paczkomaty InPost': 4.99,
-            'Allegro Automat Pocztex': 4.29,
-            'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.59,
-            'Allegro Kurier UPS': 5.79,
-            'Allegro Kurier DHL (Allegro Delivery)': 5.39,
-            'Allegro Kurier Pocztex': 5.79,
-            'Allegro One Kurier (Allegro Delivery)': 5.39
+            'Allegro Paczkomaty InPost': 5.19,
+            'Allegro Automat Pocztex': 5.19,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.69,
+            'Allegro Kurier UPS': 6.09,
+            'Allegro Kurier DHL (Allegro Delivery)': 5.59,
+            'Allegro Kurier Pocztex': 6.09,
+            'Allegro One Kurier (Allegro Delivery)': 5.59
         }
     elif 100 <= cena_sprzedazy < 150:
         return {
-            'Allegro Paczkomaty InPost': 7.59,
-            'Allegro Automat Pocztex': 6.69,
+            'Allegro Paczkomaty InPost': 7.89,
+            'Allegro Automat Pocztex': 7.89,
             'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89,
-            'Allegro Kurier UPS': 9.09,
-            'Allegro Kurier DHL (Allegro Delivery)': 8.59,
-            'Allegro Kurier Pocztex': 9.09,
-            'Allegro One Kurier (Allegro Delivery)': 8.59
+            'Allegro Kurier UPS': 9.49,
+            'Allegro Kurier DHL (Allegro Delivery)': 8.99,
+            'Allegro Kurier Pocztex': 9.49,
+            'Allegro One Kurier (Allegro Delivery)': 8.99
         }
     else:  # cena_sprzedazy >= 150
         return {
             'Allegro Paczkomaty InPost': 9.99,
-            'Allegro Automat Pocztex': 8.89,
-            'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.79,
-            'Allegro Kurier UPS': 11.49,
-            'Allegro Kurier DHL (Allegro Delivery)': 10.89,
-            'Allegro Kurier Pocztex': 11.49,
-            'Allegro One Kurier (Allegro Delivery)': 10.89
+            'Allegro Automat Pocztex': 9.99,
+            'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.99,
+            'Allegro Kurier UPS': 11.89,
+            'Allegro Kurier DHL (Allegro Delivery)': 11.29,
+            'Allegro Kurier Pocztex': 11.89,
+            'Allegro One Kurier (Allegro Delivery)': 11.29
         }
 
 def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):

@@ -860,6 +860,7 @@
                 
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cenaSprzedazyTotal, false);
+                    // ZMIENIONE - używamy nowych cen dostaw w symulacji
                     const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cenaSprzedazyTotal);
                     const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cenaSprzedazyTotal - cenaZakupuTotal - prowizjaMin - koszt - kosztPakowania);
                     marzaMin = Math.min(...marzePrzewoznicy);
@@ -1084,6 +1085,7 @@
         }
 
         // Uproszczone funkcje do obliczeń na frontendzie dla wykresu
+        // ZMIENIONE - zgodnie z nowymi cenami
         function obliczProwizje(kategoria, cena, promowanie) {
             let prowizja = 0;
             switch(kategoria) {
@@ -1106,8 +1108,8 @@
             return prowizja;
         }
 
+        // ZMIENIONE - zgodnie z nowymi cenami dostaw
         function obliczKosztDostawyDlaPrzewoznika(cena) {
-            // USUŃ wszelkie zaokrąglania - używaj dokładnej ceny!
             if (cena < 30) {
                 return {
                     'Allegro Paczkomaty InPost': 0,
@@ -1121,7 +1123,7 @@
             } else if (cena >= 30 && cena < 45) {
                 return {
                     'Allegro Paczkomaty InPost': 1.59,
-                    'Allegro Automat Pocztex': 1.29,
+                    'Allegro Automat Pocztex': 1.59,
                     'Allegro One Punkt, Orlen Punkt, DHL BOX': 0.99,
                     'Allegro Kurier UPS': 1.99,
                     'Allegro Kurier DHL (Allegro Delivery)': 1.79,
@@ -1130,9 +1132,9 @@
                 };
             } else if (cena >= 45 && cena < 65) {
                 return {
-                    'Allegro Paczkomaty InPost': 3.09,
-                    'Allegro Automat Pocztex': 2.49,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.89,
+                    'Allegro Paczkomaty InPost': 3.19,
+                    'Allegro Automat Pocztex': 3.19,
+                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.99,
                     'Allegro Kurier UPS': 3.99,
                     'Allegro Kurier DHL (Allegro Delivery)': 3.69,
                     'Allegro Kurier Pocztex': 3.99,
@@ -1140,33 +1142,33 @@
                 };
             } else if (cena >= 65 && cena < 100) {
                 return {
-                    'Allegro Paczkomaty InPost': 4.99,
-                    'Allegro Automat Pocztex': 4.29,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.59,
-                    'Allegro Kurier UPS': 5.79,
-                    'Allegro Kurier DHL (Allegro Delivery)': 5.39,
-                    'Allegro Kurier Pocztex': 5.79,
-                    'Allegro One Kurier (Allegro Delivery)': 5.39
+                    'Allegro Paczkomaty InPost': 5.19,
+                    'Allegro Automat Pocztex': 5.19,
+                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.69,
+                    'Allegro Kurier UPS': 6.09,
+                    'Allegro Kurier DHL (Allegro Delivery)': 5.59,
+                    'Allegro Kurier Pocztex': 6.09,
+                    'Allegro One Kurier (Allegro Delivery)': 5.59
                 };
             } else if (cena >= 100 && cena < 150) {
                 return {
-                    'Allegro Paczkomaty InPost': 7.59,
-                    'Allegro Automat Pocztex': 6.69,
+                    'Allegro Paczkomaty InPost': 7.89,
+                    'Allegro Automat Pocztex': 7.89,
                     'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89,
-                    'Allegro Kurier UPS': 9.09,
-                    'Allegro Kurier DHL (Allegro Delivery)': 8.59,
-                    'Allegro Kurier Pocztex': 9.09,
-                    'Allegro One Kurier (Allegro Delivery)': 8.59
+                    'Allegro Kurier UPS': 9.49,
+                    'Allegro Kurier DHL (Allegro Delivery)': 8.99,
+                    'Allegro Kurier Pocztex': 9.49,
+                    'Allegro One Kurier (Allegro Delivery)': 8.99
                 };
             } else {  // cena >= 150
                 return {
                     'Allegro Paczkomaty InPost': 9.99,
-                    'Allegro Automat Pocztex': 8.89,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.79,
-                    'Allegro Kurier UPS': 11.49,
-                    'Allegro Kurier DHL (Allegro Delivery)': 10.89,
-                    'Allegro Kurier Pocztex': 11.49,
-                    'Allegro One Kurier (Allegro Delivery)': 10.89
+                    'Allegro Automat Pocztex': 9.99,
+                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.99,
+                    'Allegro Kurier UPS': 11.89,
+                    'Allegro Kurier DHL (Allegro Delivery)': 11.29,
+                    'Allegro Kurier Pocztex': 11.89,
+                    'Allegro One Kurier (Allegro Delivery)': 11.29
                 };
             }
         }
@@ -1194,6 +1196,65 @@
             }
         }
 
+        // DODANA: Funkcja do inicjalizacji walut
+        function initWaluty() {
+            // Inicjalizacja dla towaru
+            const innaWalutaTowarCheckbox = document.querySelector('input[name="inna_waluta_towar"]');
+            const walutaTowarSelects = document.querySelectorAll('select[id^="waluta_towar"]');
+            
+            if (innaWalutaTowarCheckbox && walutaTowarSelects.length > 0) {
+                innaWalutaTowarCheckbox.addEventListener('change', function() {
+                    toggleWaluta('towar');
+                });
+                
+                walutaTowarSelects.forEach(select => {
+                    select.addEventListener('change', function(event) {
+                        synchronizujWaluty('towar', event);
+                    });
+                });
+                
+                // Wywołaj na starcie
+                toggleWaluta('towar');
+            }
+            
+            // Inicjalizacja dla dostawy
+            const innaWalutaDostawaCheckbox = document.querySelector('input[name="inna_waluta_dostawa"]');
+            const walutaDostawaSelects = document.querySelectorAll('select[id^="waluta_dostawa"]');
+            
+            if (innaWalutaDostawaCheckbox && walutaDostawaSelects.length > 0) {
+                innaWalutaDostawaCheckbox.addEventListener('change', function() {
+                    toggleWaluta('dostawa');
+                });
+                
+                walutaDostawaSelects.forEach(select => {
+                    select.addEventListener('change', function(event) {
+                        synchronizujWaluty('dostawa', event);
+                    });
+                });
+                
+                // Wywołaj na starcie
+                toggleWaluta('dostawa');
+            }
+            
+            // Inicjalizacja typów kursów
+            const typKursuTowarSelect = document.querySelector('select[name="typ_kursu_towar"]');
+            const typKursuDostawaSelect = document.querySelector('select[name="typ_kursu_dostawa"]');
+            
+            if (typKursuTowarSelect) {
+                typKursuTowarSelect.addEventListener('change', function() {
+                    toggleTypKursu('towar');
+                });
+                toggleTypKursu('towar');
+            }
+            
+            if (typKursuDostawaSelect) {
+                typKursuDostawaSelect.addEventListener('change', function() {
+                    toggleTypKursu('dostawa');
+                });
+                toggleTypKursu('dostawa');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const darkMode = {{ 'true' if session.get('dark_mode') else 'false' }};
             document.body.classList.toggle('dark-mode', darkMode);
@@ -1202,11 +1263,10 @@
             // DODANE: Inicjalizacja listenerów dla kategorii
             initKategoriaListeners();
             
+            // DODANE: Inicjalizacja walut
+            initWaluty();
+            
             toggleTrybSmart();
-            toggleWaluta('towar');
-            toggleWaluta('dostawa');
-            toggleTypKursu('towar');
-            toggleTypKursu('dostawa');
             
             const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
             const savedWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
@@ -1224,22 +1284,6 @@
                     if (select) select.value = savedWalutaDostawa;
                 });
             }
-            
-            document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                if (select) {
-                    select.addEventListener('change', function(event) {
-                        synchronizujWaluty('towar', event);
-                    });
-                }
-            });
-            
-            document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                if (select) {
-                    select.addEventListener('change', function(event) {
-                        synchronizujWaluty('dostawa', event);
-                    });
-                }
-            });
             
             const vatForm = document.getElementById('vatForm');
             if (vatForm) {
