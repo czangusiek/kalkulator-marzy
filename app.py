@@ -393,26 +393,26 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
     """Oblicza marżę dla pojedynczego produktu - ulepszona wersja z przedziałami"""
     koszt_pakowania = zamien_przecinek_na_kropke(koszt_pakowania) if koszt_pakowania else 0
     
-    # Oblicz prowizję
+    # Oblicz prowizję z minimalną wartością 0,49 zł
     if kategoria == "A":
-        prowizja = cena_sprzedazy * 0.0615
+        prowizja = max(cena_sprzedazy * 0.0615, 0.49)
     elif kategoria == "B":
-        prowizja = cena_sprzedazy * 0.1292
+        prowizja = max(cena_sprzedazy * 0.1292, 0.49)
     elif kategoria == "C":
-        prowizja = cena_sprzedazy * 0.1292
+        prowizja = max(cena_sprzedazy * 0.1292, 0.49)
     elif kategoria == "D":
-        prowizja = cena_sprzedazy * 0.1353
+        prowizja = max(cena_sprzedazy * 0.1353, 0.49)
     elif kategoria == "E":
-        prowizja = cena_sprzedazy * 0.0555
+        prowizja = max(cena_sprzedazy * 0.0555, 0.49)
     elif kategoria == "F":
         if cena_sprzedazy <= 60:
-            prowizja = cena_sprzedazy * 0.1845
+            prowizja = max(cena_sprzedazy * 0.1845, 0.49)
         else:
-            prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
+            prowizja = max(11.07 + (cena_sprzedazy - 60) * 0.0984, 0.49)
     elif kategoria == "G":
-        prowizja = cena_sprzedazy * 0.01
+        prowizja = max(cena_sprzedazy * 0.01, 0.49)
     else:
-        prowizja = cena_sprzedazy * 0.1
+        prowizja = max(cena_sprzedazy * 0.1, 0.49)
     
     # Oblicz dostawę ZMIENIONE - zgodnie z nowymi cenami
     if czy_smart and kategoria != "G":
@@ -474,60 +474,62 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
         }
 
 def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
+    # Oblicz prowizję podstawową z minimalną wartością 0,49 zł
     if kategoria == "A":
-        prowizja = cena_sprzedazy * 0.0615
+        prowizja_podstawowa = max(cena_sprzedazy * 0.0615, 0.49)
     elif kategoria == "B":
-        prowizja = cena_sprzedazy * 0.1292
+        prowizja_podstawowa = max(cena_sprzedazy * 0.1292, 0.49)
     elif kategoria == "C":
-        prowizja = cena_sprzedazy * 0.1292
+        prowizja_podstawowa = max(cena_sprzedazy * 0.1292, 0.49)
     elif kategoria == "D":
-        prowizja = cena_sprzedazy * 0.1353
+        prowizja_podstawowa = max(cena_sprzedazy * 0.1353, 0.49)
     elif kategoria == "E":
-        prowizja = cena_sprzedazy * 0.0555
+        prowizja_podstawowa = max(cena_sprzedazy * 0.0555, 0.49)
     elif kategoria == "F":
         if cena_sprzedazy <= 60:
-            prowizja = cena_sprzedazy * 0.1845
+            prowizja_podstawowa = max(cena_sprzedazy * 0.1845, 0.49)
         else:
-            prowizja = 11.07 + (cena_sprzedazy - 60) * 0.0984
+            prowizja_podstawowa = max(11.07 + (cena_sprzedazy - 60) * 0.0984, 0.49)
     elif kategoria == "G":
-        prowizja = cena_sprzedazy * 0.01
+        prowizja_podstawowa = max(cena_sprzedazy * 0.01, 0.49)
     elif kategoria == "H":
         if inna_prowizja is not None:
-            prowizja = cena_sprzedazy * (inna_prowizja / 100)
+            prowizja_podstawowa = max(cena_sprzedazy * (inna_prowizja / 100), 0.49)
         else:
-            prowizja = 0
+            prowizja_podstawowa = 0.49  # Minimalna prowizja
     elif kategoria == "I":
         if kategoria_podstawowa == "A":
-            prowizja_podstawowa = cena_sprzedazy * 0.0615
+            prowizja_bazowa = max(cena_sprzedazy * 0.0615, 0.49)
         elif kategoria_podstawowa == "B":
-            prowizja_podstawowa = cena_sprzedazy * 0.1292
+            prowizja_bazowa = max(cena_sprzedazy * 0.1292, 0.49)
         elif kategoria_podstawowa == "C":
-            prowizja_podstawowa = cena_sprzedazy * 0.1292
+            prowizja_bazowa = max(cena_sprzedazy * 0.1292, 0.49)
         elif kategoria_podstawowa == "D":
-            prowizja_podstawowa = cena_sprzedazy * 0.1353
+            prowizja_bazowa = max(cena_sprzedazy * 0.1353, 0.49)
         elif kategoria_podstawowa == "E":
-            prowizja_podstawowa = cena_sprzedazy * 0.0555
+            prowizja_bazowa = max(cena_sprzedazy * 0.0555, 0.49)
         elif kategoria_podstawowa == "F":
             if cena_sprzedazy <= 60:
-                prowizja_podstawowa = cena_sprzedazy * 0.1845
+                prowizja_bazowa = max(cena_sprzedazy * 0.1845, 0.49)
             else:
-                prowizja_podstawowa = 11.07 + (cena_sprzedazy - 60) * 0.0984
+                prowizja_bazowa = max(11.07 + (cena_sprzedazy - 60) * 0.0984, 0.49)
         elif kategoria_podstawowa == "H":
             if inna_prowizja is not None:
-                prowizja_podstawowa = cena_sprzedazy * (inna_prowizja / 100)
+                prowizja_bazowa = max(cena_sprzedazy * (inna_prowizja / 100), 0.49)
             else:
-                prowizja_podstawowa = 0
+                prowizja_bazowa = 0.49  # Minimalna prowizja
         else:
-            prowizja_podstawowa = 0
+            prowizja_bazowa = 0.49  # Minimalna prowizja
         
-        prowizja = prowizja_podstawowa * 1.6
+        prowizja_podstawowa = max(prowizja_bazowa * 1.6, 0.49)
     else:
-        prowizja = 0
+        prowizja_podstawowa = max(cena_sprzedazy * 0.1, 0.49)
 
     if promowanie and kategoria not in ["G", "I"]:
-        prowizja *= 1.75
-
-    return prowizja, prowizja
+        prowizja_promowanie = max(prowizja_podstawowa * 1.75, 0.49)
+        return prowizja_podstawowa, prowizja_promowanie
+    else:
+        return prowizja_podstawowa, prowizja_podstawowa
 
 def oblicz_koszt_wysylki(cena_sprzedazy):
     if cena_sprzedazy < 300:
@@ -802,13 +804,13 @@ def index():
                 sugerowana_cena = cena_zakupu_total / 0.84
 
                 # Nowe obliczenia dla Ceneo
-                prowizja_min_kawa = cena_sprzedazy_total * 0.06
+                prowizja_min_kawa = max(cena_sprzedazy_total * 0.06, 0.49)
                 marza_max_kawa = cena_sprzedazy_total - cena_zakupu_total - prowizja_min_kawa - koszt_pakowania
-                prowizja_akcesoria = cena_sprzedazy_total * 0.077
+                prowizja_akcesoria = max(cena_sprzedazy_total * 0.077, 0.49)
                 marza_akcesoria = cena_sprzedazy_total - cena_zakupu_total - prowizja_akcesoria - koszt_pakowania
-                prowizja_syropy = cena_sprzedazy_total * 0.0813
+                prowizja_syropy = max(cena_sprzedazy_total * 0.0813, 0.49)
                 marza_syropy = cena_sprzedazy_total - cena_zakupu_total - prowizja_syropy - koszt_pakowania
-                prowizja_max_agd = cena_sprzedazy_total * 0.0882
+                prowizja_max_agd = max(cena_sprzedazy_total * 0.0882, 0.49)
                 marza_min_agd = cena_sprzedazy_total - cena_zakupu_total - prowizja_max_agd - koszt_pakowania
 
                 wynik_html = f"""

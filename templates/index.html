@@ -1085,24 +1085,24 @@
         }
 
         // Uproszczone funkcje do obliczeń na frontendzie dla wykresu
-        // ZMIENIONE - zgodnie z nowymi cenami
+        // ZMIENIONE - zgodnie z nowymi cenami i minimalną prowizją 0,49 zł
         function obliczProwizje(kategoria, cena, promowanie) {
             let prowizja = 0;
             switch(kategoria) {
-                case "A": prowizja = cena * 0.0615; break;
-                case "B": prowizja = cena * 0.1292; break;
-                case "C": prowizja = cena * 0.1292; break;
-                case "D": prowizja = cena * 0.1353; break;
-                case "E": prowizja = cena * 0.0555; break;
+                case "A": prowizja = Math.max(cena * 0.0615, 0.49); break;
+                case "B": prowizja = Math.max(cena * 0.1292, 0.49); break;
+                case "C": prowizja = Math.max(cena * 0.1292, 0.49); break;
+                case "D": prowizja = Math.max(cena * 0.1353, 0.49); break;
+                case "E": prowizja = Math.max(cena * 0.0555, 0.49); break;
                 case "F": 
-                    prowizja = cena <= 60 ? cena * 0.1845 : 11.07 + (cena - 60) * 0.0984;
+                    prowizja = cena <= 60 ? Math.max(cena * 0.1845, 0.49) : Math.max(11.07 + (cena - 60) * 0.0984, 0.49);
                     break;
-                case "G": prowizja = cena * 0.01; break;
-                default: prowizja = cena * 0.1; // domyślna
+                case "G": prowizja = Math.max(cena * 0.01, 0.49); break;
+                default: prowizja = Math.max(cena * 0.1, 0.49); // domyślna z minimum 0,49 zł
             }
             
             if (promowanie && kategoria !== "G" && kategoria !== "I") {
-                prowizja *= 1.75;
+                prowizja = Math.max(prowizja * 1.75, 0.49);
             }
             
             return prowizja;
