@@ -362,6 +362,14 @@
                 padding: 4px;
             }
         }
+        
+        .label-mnoznik {
+            font-size: 0.85em; 
+            color: var(--blue-color);
+            margin-top: -5px;
+            margin-bottom: 5px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -384,21 +392,24 @@
                 {{ form_marza.hidden_tag() }}
                 <label for="cena_zakupu">Cena zakupu:</label>
                 {{ form_marza.cena_zakupu(size=20) }}
+                <label for="mnoznik_zakupu" class="label-mnoznik">Mnożnik ceny zakupu (ilość sztuk składająca się na podaną cenę):</label>
+                {{ form_marza.mnoznik_zakupu(size=20) }}
                 <br>
                 <label for="cena_sprzedazy">Cena sprzedaży:</label>
                 {{ form_marza.cena_sprzedazy(size=20) }}
+                <label for="mnoznik_sprzedazy" class="label-mnoznik">Mnożnik ceny sprzedaży:</label>
+                {{ form_marza.mnoznik_sprzedazy(size=20) }}
                 <br>
                 <label for="kategoria">Kategoria:</label>
                 {{ form_marza.kategoria() }}
                 <br>
-                <label for="ilosc_w_zestawie">Ilość w zestawie:</label>
+                <label for="ilosc_w_zestawie">Ilość w zestawie (mnożnik całościowy):</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
                 <br>
 
                 <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji()">▼ Więcej opcji</button>
                 
                 <div id="wiecej-opcji" class="wiecej-opcji">
-                    <!-- PRZENIESIONE pola inna_prowizja i kategoria_podstawowa na początek -->
                     <div id="inna-prowizja-div" class="inna-prowizja">
                         <label for="inna_prowizja">Procent prowizji:</label>
                         {{ form_marza.inna_prowizja(size=20) }}
@@ -443,7 +454,6 @@
             <h2>Wynik:</h2>
             <div class="wynik">{{ wynik_marza | safe }}</div>
             
-            <!-- Sekcja symulacji dla różnych ilości sztuk -->
             <div class="symulacja-container">
                 <button type="button" class="toggle-wiecej-opcji" onclick="toggleSymulacja()">▼ Symulacja dla różnych ilości sztuk</button>
                 <div id="symulacja" class="wiecej-opcji" style="display: none;">
@@ -462,7 +472,7 @@
                 {% for wpis in historia_marz %}
                 <div class="historia-wpis" onclick="wczytajZHistorii({{ loop.index0 }})">
                     <strong>{{ wpis.timestamp }}</strong><br>
-                    Zakup: {{ wpis.cena_zakupu }} zł | Sprzedaż: {{ wpis.cena_sprzedazy }} zł | 
+                    Zakup: {{ wpis.cena_zakupu }} zł (x{{ wpis.get('mnoznik_zakupu', 1) }}) | Sprzedaż: {{ wpis.cena_sprzedazy }} zł (x{{ wpis.get('mnoznik_sprzedazy', 1) }}) | 
                     Kategoria: {{ wpis.kategoria }} | Smart: {{ 'Tak' if wpis.czy_smart else 'Nie' }}
                     {% if wpis.get('koszt_pakowania', 0) > 0 %}
                     | Pakowanie: {{ wpis.get('koszt_pakowania', 0) }} zł
@@ -794,7 +804,9 @@
             const wpis = historiaDanych[index];
             if (wpis) {
                 const cenaZakupu = document.getElementById('cena_zakupu');
+                const mnoznikZakupu = document.getElementById('mnoznik_zakupu');
                 const cenaSprzedazy = document.getElementById('cena_sprzedazy');
+                const mnoznikSprzedazy = document.getElementById('mnoznik_sprzedazy');
                 const kategoria = document.getElementById('kategoria');
                 const czySmart = document.querySelector('input[name="czy_smart"]');
                 const marzaKwota = document.getElementById('marza_kwota');
@@ -802,14 +814,15 @@
                 const kosztPakowania = document.getElementById('koszt_pakowania');
                 
                 if (cenaZakupu) cenaZakupu.value = wpis.cena_zakupu || '';
+                if (mnoznikZakupu) mnoznikZakupu.value = wpis.mnoznik_zakupu || '1';
                 if (cenaSprzedazy) cenaSprzedazy.value = wpis.cena_sprzedazy || '';
+                if (mnoznikSprzedazy) mnoznikSprzedazy.value = wpis.mnoznik_sprzedazy || '1';
                 if (kategoria) kategoria.value = wpis.kategoria || '';
                 if (czySmart) czySmart.checked = wpis.czy_smart || false;
                 if (marzaKwota) marzaKwota.value = wpis.marza_kwota || '';
                 if (marzaProcent) marzaProcent.value = wpis.marza_procent || '';
                 if (kosztPakowania) kosztPakowania.value = wpis.koszt_pakowania || 0;
                 
-                // Przełącz widoczność dodatkowych opcji
                 toggleInnaProwizja();
                 toggleTrybSmart();
             }
@@ -817,7 +830,9 @@
 
         function generujSymulacje() {
             const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const mnoznikZakupuEl = document.getElementById('mnoznik_zakupu');
             const cenaSprzedazyEl = document.getElementById('cena_sprzedazy');
+            const mnoznikSprzedazyEl = document.getElementById('mnoznik_sprzedazy');
             const kategoriaEl = document.getElementById('kategoria');
             const czySmartEl = document.querySelector('input[name="czy_smart"]');
             const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
@@ -825,25 +840,19 @@
             
             if (!cenaZakupuEl || !cenaSprzedazyEl || !kategoriaEl || !czySmartEl) return;
             
-            // POPRAWIONE - użyj parseFloat z zabezpieczeniem przed NaN
-            const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
-            const cenaSprzedazy = parseFloat(cenaSprzedazyEl.value.replace(',', '.')) || 0; // Zamień przecinki na kropki
+            const mnoznikZakupu = parseFloat(mnoznikZakupuEl ? mnoznikZakupuEl.value.replace(',', '.') : 1) || 1;
+            const mnoznikSprzedazy = parseFloat(mnoznikSprzedazyEl ? mnoznikSprzedazyEl.value.replace(',', '.') : 1) || 1;
+            
+            const cenaZakupu = (parseFloat(cenaZakupuEl.value.replace(',', '.')) || 0) * mnoznikZakupu;
+            const cenaSprzedazy = (parseFloat(cenaSprzedazyEl.value.replace(',', '.')) || 0) * mnoznikSprzedazy;
+            
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
-            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
-            const aktualnaIlosc = parseFloat(iloscWZestawieEl ? iloscWZestawieEl.value : 0) || 1;
-            
-            // DEBUG - sprawdź wartości
-            console.log("DEBUG - Cena sprzedazy:", cenaSprzedazy);
-            console.log("DEBUG - Cena sprzedazy dla 2 sztuk:", cenaSprzedazy * 2);
-            console.log("DEBUG - Typ danych:", typeof cenaSprzedazy);
+            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value.replace(',', '.') : 0) || 0;
+            const aktualnaIlosc = parseFloat(iloscWZestawieEl ? iloscWZestawieEl.value.replace(',', '.') : 0) || 1;
 
-            if (cenaZakupu <= 0 || cenaSprzedazy <= 0) {
-                console.log("DEBUG - Brak danych do symulacji");
-                return;
-            }
+            if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
 
-            // Generuj ilości sztuk do symulacji (od 1 do 20, z zaznaczeniem aktualnej)
             const ilosciSztuk = [];
             for (let i = 1; i <= 20; i++) {
                 ilosciSztuk.push(i);
@@ -853,14 +862,13 @@
             
             ilosciSztuk.forEach(ilosc => {
                 const cenaZakupuTotal = cenaZakupu * ilosc;
-                const cenaSprzedazyTotal = cenaSprzedazy * ilosc; // NIE zaokrąglaj!
+                const cenaSprzedazyTotal = cenaSprzedazy * ilosc; 
                 
                 let marzaMin = 0;
                 let marzaMax = 0;
                 
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cenaSprzedazyTotal, false);
-                    // ZMIENIONE - używamy nowych cen dostaw w symulacji
                     const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cenaSprzedazyTotal);
                     const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cenaSprzedazyTotal - cenaZakupuTotal - prowizjaMin - koszt - kosztPakowania);
                     marzaMin = Math.min(...marzePrzewoznicy);
@@ -882,7 +890,6 @@
                 });
             });
 
-            // Generuj tabelę symulacji
             const symulacjaTabelaContainer = document.getElementById('symulacja-tabela-container');
             if (!symulacjaTabelaContainer) return;
             
@@ -890,10 +897,10 @@
                 <table class="symulacja-tabela">
                     <thead>
                         <tr>
-                            <th>Ilość sztuk</th>
+                            <th>Ilość sztuk (zestawów)</th>
                             <th>Cena sprzedaży całkowita</th>
                             <th>Marża całkowita (min-max)</th>
-                            <th>Marża na sztukę (min-max)</th>
+                            <th>Marża na zestaw (min-max)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -918,7 +925,6 @@
 
             symulacjaTabelaContainer.innerHTML = tabelaHTML;
 
-            // Generuj wykres symulacji
             const ctx = document.getElementById('wykresSymulacji');
             if (!ctx) return;
             
@@ -960,7 +966,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Marża całkowita w zależności od ilości sztuk'
+                            text: 'Marża całkowita w zależności od ilości zestawów'
                         },
                         tooltip: {
                             callbacks: {
@@ -974,7 +980,7 @@
                         x: {
                             title: {
                                 display: true,
-                                text: 'Ilość sztuk'
+                                text: 'Ilość zestawów'
                             }
                         },
                         y: {
@@ -991,34 +997,35 @@
 
         function generujWykresMarzy() {
             const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const mnoznikZakupuEl = document.getElementById('mnoznik_zakupu');
             const kategoriaEl = document.getElementById('kategoria');
             const czySmartEl = document.querySelector('input[name="czy_smart"]');
             const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
             
             if (!cenaZakupuEl || !kategoriaEl || !czySmartEl) return;
             
-            const cenaZakupu = parseFloat(cenaZakupuEl.value) || 0;
+            const mnoznikZakupu = parseFloat(mnoznikZakupuEl ? mnoznikZakupuEl.value.replace(',', '.') : 1) || 1;
+            const cenaZakupu = (parseFloat(cenaZakupuEl.value.replace(',', '.')) || 0) * mnoznikZakupu;
+            
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
-            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value : 0) || 0;
+            const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value.replace(',', '.') : 0) || 0;
             
             if (cenaZakupu <= 0) return;
 
             const cenySprzedazy = [];
             const marze = [];
             
-            // Generuj ceny sprzedaży od ceny zakupu do 3x ceny zakupu
-            const krok = cenaZakupu * 0.1; // 10% kroki
+            const krok = cenaZakupu * 0.1; 
             for (let cena = cenaZakupu; cena <= cenaZakupu * 3; cena += krok) {
                 cenySprzedazy.push(cena);
                 
-                // Oblicz marżę dla danej cena
                 let marza = 0;
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cena, false);
                     const kosztyDostaw = obliczKosztDostawyDlaPrzewoznika(cena);
                     const marzePrzewoznicy = Object.values(kosztyDostaw).map(koszt => cena - cenaZakupu - prowizjaMin - koszt - kosztPakowania);
-                    marza = Math.min(...marzePrzewoznicy); // Najmniejsza marża
+                    marza = Math.min(...marzePrzewoznicy); 
                 } else {
                     const prowizja = obliczProwizje(kategoria, cena, false);
                     marza = cena - cenaZakupu - prowizja - kosztPakowania;
@@ -1032,7 +1039,6 @@
             
             const ctxCanvas = ctx.getContext('2d');
             
-            // Zniszcz poprzedni wykres jeśli istnieje
             if (window.marzaChart) {
                 window.marzaChart.destroy();
             }
@@ -1040,7 +1046,7 @@
             window.marzaChart = new Chart(ctxCanvas, {
                 type: 'line',
                 data: {
-                    labels: cenySprzedazy.map(c => Math.round(c) + ' zł'), // Zaokrąglenie do pełnych złotówek tylko dla wykresu
+                    labels: cenySprzedazy.map(c => Math.round(c) + ' zł'),
                     datasets: [{
                         label: 'Marża (zł)',
                         data: marze,
@@ -1060,7 +1066,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`; // Dwie cyfry po przecinku w tooltip
+                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`; 
                                 }
                             }
                         }
@@ -1084,8 +1090,6 @@
             });
         }
 
-        // Uproszczone funkcje do obliczeń na frontendzie dla wykresu
-        // ZMIENIONE - zgodnie z nowymi cenami i minimalną prowizją 0,49 zł
         function obliczProwizje(kategoria, cena, promowanie) {
             let prowizja = 0;
             switch(kategoria) {
@@ -1098,7 +1102,7 @@
                     prowizja = cena <= 60 ? Math.max(cena * 0.1845, 0.49) : Math.max(11.07 + (cena - 60) * 0.0984, 0.49);
                     break;
                 case "G": prowizja = Math.max(cena * 0.01, 0.49); break;
-                default: prowizja = Math.max(cena * 0.1, 0.49); // domyślna z minimum 0,49 zł
+                default: prowizja = Math.max(cena * 0.1, 0.49); 
             }
             
             if (promowanie && kategoria !== "G" && kategoria !== "I") {
@@ -1108,7 +1112,6 @@
             return prowizja;
         }
 
-        // ZMIENIONE - zgodnie z nowymi cenami dostaw
         function obliczKosztDostawyDlaPrzewoznika(cena) {
             if (cena < 30) {
                 return {
@@ -1160,7 +1163,7 @@
                     'Allegro Kurier Pocztex': 9.49,
                     'Allegro One Kurier (Allegro Delivery)': 8.99
                 };
-            } else {  // cena >= 150
+            } else {  
                 return {
                     'Allegro Paczkomaty InPost': 9.99,
                     'Allegro Automat Pocztex': 9.99,
@@ -1173,13 +1176,11 @@
             }
         }
 
-        // DODANA: Funkcja do inicjalizacji listenerów dla kategorii
         function initKategoriaListeners() {
             const kategoriaEl = document.getElementById('kategoria');
             if (kategoriaEl) {
                 kategoriaEl.addEventListener('change', function() {
                     toggleInnaProwizja();
-                    // Upewnij się, że pola są widoczne/niewidoczne
                     const kategoriaValue = this.value;
                     const innaProwizjaInput = document.getElementById('inna_prowizja');
                     const kategoriaPodstawowaSelect = document.getElementById('kategoria_podstawowa');
@@ -1191,14 +1192,11 @@
                     }
                 });
                 
-                // Wywołaj na starcie
                 toggleInnaProwizja();
             }
         }
 
-        // DODANA: Funkcja do inicjalizacji walut
         function initWaluty() {
-            // Inicjalizacja dla towaru
             const innaWalutaTowarCheckbox = document.querySelector('input[name="inna_waluta_towar"]');
             const walutaTowarSelects = document.querySelectorAll('select[id^="waluta_towar"]');
             
@@ -1213,11 +1211,9 @@
                     });
                 });
                 
-                // Wywołaj na starcie
                 toggleWaluta('towar');
             }
             
-            // Inicjalizacja dla dostawy
             const innaWalutaDostawaCheckbox = document.querySelector('input[name="inna_waluta_dostawa"]');
             const walutaDostawaSelects = document.querySelectorAll('select[id^="waluta_dostawa"]');
             
@@ -1232,11 +1228,9 @@
                     });
                 });
                 
-                // Wywołaj na starcie
                 toggleWaluta('dostawa');
             }
             
-            // Inicjalizacja typów kursów
             const typKursuTowarSelect = document.querySelector('select[name="typ_kursu_towar"]');
             const typKursuDostawaSelect = document.querySelector('select[name="typ_kursu_dostawa"]');
             
@@ -1260,12 +1254,8 @@
             document.body.classList.toggle('dark-mode', darkMode);
             updateColors(darkMode);
             
-            // DODANE: Inicjalizacja listenerów dla kategorii
             initKategoriaListeners();
-            
-            // DODANE: Inicjalizacja walut
             initWaluty();
-            
             toggleTrybSmart();
             
             const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
@@ -1300,18 +1290,22 @@
                 });
             }
 
-            // Generuj wykres przy zmianie ceny zakupu
             const cenaZakupuEl = document.getElementById('cena_zakupu');
+            const mnoznikZakupuEl = document.getElementById('mnoznik_zakupu');
+            const cenaSprzedazyEl = document.getElementById('cena_sprzedazy');
+            const mnoznikSprzedazyEl = document.getElementById('mnoznik_sprzedazy');
             const kategoriaEl = document.getElementById('kategoria');
             const czySmartEl = document.querySelector('input[name="czy_smart"]');
             const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
             
             if (cenaZakupuEl) cenaZakupuEl.addEventListener('input', generujWykresMarzy);
+            if (mnoznikZakupuEl) mnoznikZakupuEl.addEventListener('input', generujWykresMarzy);
+            if (cenaSprzedazyEl) cenaSprzedazyEl.addEventListener('input', generujWykresMarzy);
+            if (mnoznikSprzedazyEl) mnoznikSprzedazyEl.addEventListener('input', generujWykresMarzy);
             if (kategoriaEl) kategoriaEl.addEventListener('change', generujWykresMarzy);
             if (czySmartEl) czySmartEl.addEventListener('change', generujWykresMarzy);
             if (kosztPakowaniaEl) kosztPakowaniaEl.addEventListener('input', generujWykresMarzy);
 
-            // Generuj początkowy wykres jeśli mamy dane
             setTimeout(generujWykresMarzy, 1000);
         });
     </script>

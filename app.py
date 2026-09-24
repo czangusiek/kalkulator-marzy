@@ -75,7 +75,9 @@ def favicon():
 
 class KalkulatorMarzyForm(FlaskForm):
     cena_zakupu = StringField('Cena zakupu:', validators=[DataRequired()])
+    mnoznik_zakupu = StringField('Mnożnik zakupu:', default="1", validators=[DataRequired()])
     cena_sprzedazy = StringField('Cena sprzedaży:', validators=[DataRequired()])
+    mnoznik_sprzedazy = StringField('Mnożnik sprzedaży:', default="1", validators=[DataRequired()])
     kategoria = SelectField('Kategoria:', choices=[
         ('A', 'Supermarket (6,15%)'),
         ('B', 'Cukier (12,92%)'),
@@ -673,10 +675,21 @@ def index():
     for wpis in session['historia_marz']:
         if 'koszt_pakowania' not in wpis:
             wpis['koszt_pakowania'] = 0
+        if 'mnoznik_zakupu' not in wpis:
+            wpis['mnoznik_zakupu'] = 1
+        if 'mnoznik_sprzedazy' not in wpis:
+            wpis['mnoznik_sprzedazy'] = 1
 
     if form_marza.submit.data and form_marza.validate():
-        cena_zakupu = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
-        cena_sprzedazy = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
+        cena_zakupu_wpis = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
+        mnoznik_zakupu = zamien_przecinek_na_kropke(form_marza.mnoznik_zakupu.data)
+        cena_sprzedazy_wpis = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
+        mnoznik_sprzedazy = zamien_przecinek_na_kropke(form_marza.mnoznik_sprzedazy.data)
+        
+        # Obliczenie bazowych cen po uwzględnieniu nowych mnożników
+        cena_zakupu = cena_zakupu_wpis * (mnoznik_zakupu if mnoznik_zakupu else 1)
+        cena_sprzedazy = cena_sprzedazy_wpis * (mnoznik_sprzedazy if mnoznik_sprzedazy else 1)
+
         kategoria = form_marza.kategoria.data
         inna_prowizja = form_marza.inna_prowizja.data
         kategoria_podstawowa = form_marza.kategoria_podstawowa.data if kategoria == "I" else None
@@ -1313,8 +1326,10 @@ def index():
         # Dodaj do historii
         historia_wpis = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'cena_zakupu': cena_zakupu,
-            'cena_sprzedazy': cena_sprzedazy,
+            'cena_zakupu': zamien_przecinek_na_kropke(form_marza.cena_zakupu.data),
+            'mnoznik_zakupu': mnoznik_zakupu if mnoznik_zakupu else 1.0,
+            'cena_sprzedazy': zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data),
+            'mnoznik_sprzedazy': mnoznik_sprzedazy if mnoznik_sprzedazy else 1.0,
             'kategoria': kategoria,
             'marza_kwota': marza_kwota,
             'marza_procent': marza_procent,
