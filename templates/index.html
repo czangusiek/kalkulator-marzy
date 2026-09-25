@@ -41,7 +41,7 @@
             transition: all 0.3s ease;
             font-family: Arial, sans-serif;
             padding: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -73,13 +73,13 @@
             border-radius: 4px;
         }
 
-        #kategoria-podstawowa-div select {
+        #kategoria-podstawowa-div select, #kategoria-podstawowa-zakup-div select {
             width: 250px !important;
             max-width: 100%;
         }
 
         @media (max-width: 768px) {
-            #kategoria-podstawowa-div select {
+            #kategoria-podstawowa-div select, #kategoria-podstawowa-zakup-div select {
                 width: 100% !important;
             }
         }
@@ -108,28 +108,19 @@
             border: 1px dashed var(--hr-color);
             margin: 20px 0;
         }
-        .inna-prowizja {
-            display: none;
-        }
-        .kategoria-podstawowa {
-            display: none;
-        }
-        .kalkulator-vat {
-            margin-top: 40px;
-            padding: 20px;
-            border: 1px solid var(--container-border);
-            border-radius: 5px;
-            background-color: var(--container-bg);
-        }
+        
+        .inna-prowizja, .inna-prowizja-zakup { display: none; }
+        .kategoria-podstawowa, .kategoria-podstawowa-zakup { display: none; }
+        .tryb-nie-smart, .tryb-nie-smart-zakup { display: none; }
+        
         .container {
             display: flex;
-            justify-content: space-between;
             flex-wrap: wrap;
             gap: 20px;
         }
         .kalkulator {
             flex: 1;
-            min-width: 300px;
+            min-width: 350px;
             padding: 20px;
             border: 1px solid var(--container-border);
             border-radius: 5px;
@@ -227,10 +218,6 @@
 
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(var(--dark-mode-invert, 0));
-        }
-
-        .tryb-nie-smart {
-            display: none;
         }
 
         .wiecej-opcji {
@@ -350,25 +337,9 @@
         }
 
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .symulacja-tabela {
-                font-size: 12px;
-            }
-            
-            .symulacja-tabela th, .symulacja-tabela td {
-                padding: 4px;
-            }
-        }
-        
-        .label-mnoznik {
-            font-size: 0.85em; 
-            color: var(--blue-color);
-            margin-top: -5px;
-            margin-bottom: 5px;
-            display: block;
+            .container { flex-direction: column; }
+            .symulacja-tabela { font-size: 12px; }
+            .symulacja-tabela th, .symulacja-tabela td { padding: 4px; }
         }
     </style>
 </head>
@@ -386,67 +357,71 @@
     </div>
     
     <div class="container">
+        <!-- KALKULATOR MARŻY (STANDARDOWY) -->
         <div class="kalkulator">
             <h2>Kalkulator marży</h2>
             <form method="POST" id="formMarza">
                 {{ form_marza.hidden_tag() }}
-                <label for="cena_zakupu">Cena zakupu:</label>
-                {{ form_marza.cena_zakupu(size=20) }}
-                <label for="mnoznik_zakupu" class="label-mnoznik">Mnożnik ceny zakupu (ilość sztuk składająca się na podaną cenę):</label>
-                {{ form_marza.mnoznik_zakupu(size=20) }}
-                <br>
-                <label for="cena_sprzedazy">Cena sprzedaży:</label>
-                {{ form_marza.cena_sprzedazy(size=20) }}
-                <label for="mnoznik_sprzedazy" class="label-mnoznik">Mnożnik ceny sprzedaży:</label>
-                {{ form_marza.mnoznik_sprzedazy(size=20) }}
-                <br>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 5px; align-items: flex-end;">
+                    <div style="flex: 2;">
+                        <label for="cena_zakupu">Cena zakupu:</label>
+                        {{ form_marza.cena_zakupu(style="margin-bottom:0;") }}
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="mnoznik_zakupu" style="color: var(--blue-color); font-size: 0.9em;">Mnożnik:</label>
+                        {{ form_marza.mnoznik_zakupu(style="margin-bottom:0;") }}
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 5px; align-items: flex-end;">
+                    <div style="flex: 2;">
+                        <label for="cena_sprzedazy">Cena sprzedaży:</label>
+                        {{ form_marza.cena_sprzedazy(style="margin-bottom:0;") }}
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="mnoznik_sprzedazy" style="color: var(--blue-color); font-size: 0.9em;">Mnożnik:</label>
+                        {{ form_marza.mnoznik_sprzedazy(style="margin-bottom:0;") }}
+                    </div>
+                </div>
+
                 <label for="kategoria">Kategoria:</label>
                 {{ form_marza.kategoria() }}
-                <br>
+                
                 <label for="ilosc_w_zestawie">Ilość w zestawie (mnożnik całościowy):</label>
                 {{ form_marza.ilosc_w_zestawie(size=20) }}
-                <br>
 
-                <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji()">▼ Więcej opcji</button>
+                <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji('wiecej-opcji', this)">▼ Więcej opcji</button>
                 
                 <div id="wiecej-opcji" class="wiecej-opcji">
                     <div id="inna-prowizja-div" class="inna-prowizja">
                         <label for="inna_prowizja">Procent prowizji:</label>
                         {{ form_marza.inna_prowizja(size=20) }}
-                        <br>
                     </div>
                     <div id="kategoria-podstawowa-div" class="kategoria-podstawowa">
                         <label for="kategoria_podstawowa">Kategoria podstawowa:</label>
                         {{ form_marza.kategoria_podstawowa() }}
-                        <br>
                     </div>
                     
-                    <label>
-                        {{ form_marza.czy_smart() }} Czy smart?
-                    </label>
+                    <label>{{ form_marza.czy_smart() }} Czy smart?</label>
                     
                     <div id="tryb-nie-smart-div" class="tryb-nie-smart">
-                        <label for="kwota_dostawy_smart">Kwota dostawy:</label>
+                        <label for="kwota_dostawy_smart">Kwota dostawy (nie-smart):</label>
                         {{ form_marza.kwota_dostawy_smart(size=20) }}
-                        <br>
                     </div>
 
                     <div class="marze-ustawienia">
                         <label for="marza_kwota">Marża minimalna (zł):</label>
                         {{ form_marza.marza_kwota(size=20) }}
-                        <br>
                         <label for="marza_procent">Marża procentowa (%):</label>
                         {{ form_marza.marza_procent(size=20) }}
-                        <br>
                     </div>
 
                     <div class="koszt-pakowania">
                         <label for="koszt_pakowania">Koszt pakowania (zł):</label>
                         {{ form_marza.koszt_pakowania(size=20) }}
-                        <br>
                     </div>
                 </div>
-                <br>
                 {{ form_marza.submit() }}
             </form>
 
@@ -455,7 +430,7 @@
             <div class="wynik">{{ wynik_marza | safe }}</div>
             
             <div class="symulacja-container">
-                <button type="button" class="toggle-wiecej-opcji" onclick="toggleSymulacja()">▼ Symulacja dla różnych ilości sztuk</button>
+                <button type="button" class="toggle-wiecej-opcji" onclick="toggleSymulacja(this)">▼ Symulacja dla różnych ilości sztuk</button>
                 <div id="symulacja" class="wiecej-opcji" style="display: none;">
                     <h3>Symulacja marży dla różnych ilości sztuk</h3>
                     <div id="symulacja-tabela-container"></div>
@@ -472,47 +447,87 @@
                 {% for wpis in historia_marz %}
                 <div class="historia-wpis" onclick="wczytajZHistorii({{ loop.index0 }})">
                     <strong>{{ wpis.timestamp }}</strong><br>
-                    Zakup: {{ wpis.cena_zakupu }} zł (x{{ wpis.get('mnoznik_zakupu', 1) }}) | Sprzedaż: {{ wpis.cena_sprzedazy }} zł (x{{ wpis.get('mnoznik_sprzedazy', 1) }}) | 
+                    Zakup: {{ wpis.cena_zakupu }} zł (x{{ wpis.get('mnoznik_zakupu', 1) }}) | Sprzedaż: {{ wpis.cena_sprzedazy }} zł (x{{ wpis.get('mnoznik_sprzedazy', 1) }})<br>
                     Kategoria: {{ wpis.kategoria }} | Smart: {{ 'Tak' if wpis.czy_smart else 'Nie' }}
-                    {% if wpis.get('koszt_pakowania', 0) > 0 %}
-                    | Pakowanie: {{ wpis.get('koszt_pakowania', 0) }} zł
-                    {% endif %}
+                    {% if wpis.get('koszt_pakowania', 0) > 0 %} | Pakow.: {{ wpis.get('koszt_pakowania', 0) }} zł {% endif %}
                 </div>
                 {% endfor %}
             </div>
             {% endif %}
 
             <div class="wykres-container">
-                <h3>Wykres marży w zależności od ceny sprzedaży</h3>
+                <h3>Wykres marży (od ceny sprzedaży)</h3>
                 <canvas id="wykresMarzy" width="400" height="200"></canvas>
             </div>
         </div>
 
+        <!-- KALKULATOR ZAKUPU (ODWRÓCONY) -->
+        <div class="kalkulator">
+            <h2>Kalkulator Ceny Zakupu <span style="font-size: 0.6em; color: var(--blue-color);">(Odwrócony)</span></h2>
+            <form method="POST" id="formZakup">
+                {{ form_zakup.hidden_tag() }}
+                
+                <label for="cena_sprzedazy_docelowa">Za ile chcesz to sprzedawać?</label>
+                {{ form_zakup.cena_sprzedazy_docelowa(size=20) }}
+
+                <label for="oczekiwana_marza">Ile na tym chcesz zarobić na czysto (w zł)?</label>
+                {{ form_zakup.oczekiwana_marza(size=20) }}
+
+                <label for="kategoria_zakup">Kategoria:</label>
+                {{ form_zakup.kategoria_zakup() }}
+
+                <button type="button" class="toggle-wiecej-opcji" onclick="toggleWiecejOpcji('wiecej-opcji-zakup', this)">▼ Więcej opcji</button>
+                
+                <div id="wiecej-opcji-zakup" class="wiecej-opcji">
+                    <div id="inna-prowizja-zakup-div" class="inna-prowizja-zakup">
+                        <label for="inna_prowizja_zakup">Procent prowizji:</label>
+                        {{ form_zakup.inna_prowizja_zakup(size=20) }}
+                    </div>
+                    <div id="kategoria-podstawowa-zakup-div" class="kategoria-podstawowa-zakup">
+                        <label for="kategoria_podstawowa_zakup">Kategoria podstawowa:</label>
+                        {{ form_zakup.kategoria_podstawowa_zakup() }}
+                    </div>
+                    
+                    <label>{{ form_zakup.czy_smart_zakup() }} Czy smart?</label>
+                    
+                    <div id="tryb-nie-smart-zakup-div" class="tryb-nie-smart-zakup">
+                        <label for="kwota_dostawy_smart_zakup">Kwota dostawy (nie-smart):</label>
+                        {{ form_zakup.kwota_dostawy_smart_zakup(size=20) }}
+                    </div>
+
+                    <div class="koszt-pakowania">
+                        <label for="koszt_pakowania_zakup">Koszt pakowania (zł):</label>
+                        {{ form_zakup.koszt_pakowania_zakup(size=20) }}
+                    </div>
+                </div>
+                {{ form_zakup.submit_zakup() }}
+            </form>
+
+            {% if wynik_zakup %}
+            <h2>Wynik:</h2>
+            <div class="wynik">{{ wynik_zakup | safe }}</div>
+            {% endif %}
+        </div>
+
+        <!-- KALKULATOR VAT -->
         <div class="kalkulator">
             <h2>Kalkulator VAT</h2>
             <form method="POST" id="vatForm">
                 {{ form_vat.hidden_tag() }}
                 <label for="cena_netto">Wpisz cenę netto:</label>
                 {{ form_vat.cena_netto(size=20) }}
-                <br>
                 <label for="ilosc_sztuk">Ilość sztuk w cenie netto:</label>
                 {{ form_vat.ilosc_sztuk(size=20) }}
-                <br>
                 <label for="vat">Wybierz podatek VAT:</label>
                 {{ form_vat.vat() }}
-                <br>
                 <label for="koszt_dostawy_sztuka">Wpisz koszt dostawy na sztukę:</label>
                 {{ form_vat.koszt_dostawy_sztuka(size=20) }}
-                <br>
                 <label for="kwota_dostawy">Lub wpisz kwotę dostawy:</label>
                 {{ form_vat.kwota_dostawy(size=20) }}
-                <br>
                 <label for="ilosc_w_dostawie">Ilość sztuk w dostawie:</label>
                 {{ form_vat.ilosc_w_dostawie(size=20) }}
-                <br>
-                <label>
-                    {{ form_vat.inna_waluta_towar() }} Inna waluta niż PLN (towar)
-                </label>
+                
+                <label>{{ form_vat.inna_waluta_towar() }} Inna waluta niż PLN (towar)</label>
                 <div id="waluta-container-towar" class="waluta-container">
                     <label for="typ_kursu_towar">Typ kursu:</label>
                     {{ form_vat.typ_kursu_towar() }}
@@ -520,59 +535,48 @@
                     <div id="waluta-towar-aktualny" class="waluta-typ">
                         <label for="waluta_towar">Waluta:</label>
                         <select id="waluta_towar_select" name="waluta_towar">
-                            <option value="USD">USD (dolar amerykański)</option>
-                            <option value="EUR">EUR (euro)</option>
-                            <option value="GBP">GBP (funt brytyjski)</option>
+                            <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
                         </select>
                     </div>
                     
                     <div id="waluta-towar-historyczny" class="waluta-typ" style="display:none;">
-                        <label for="waluta_towar">Waluta:</label>
+                        <label for="waluta_towar_historyczny_select">Waluta:</label>
                         <select id="waluta_towar_historyczny_select" name="waluta_towar">
-                            <option value="USD">USD (dolar amerykański)</option>
-                            <option value="EUR">EUR (euro)</option>
-                            <option value="GBP">GBP (funt brytyjski)</option>
+                            <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
                         </select>
                         <label for="data_kursu_towar">Data kursu (RRRR-MM-DD):</label>
-                        <input type="date" id="data_kursu_towar" name="data_kursu_towar" 
-                               value="{{ form_vat.data_kursu_towar.data if form_vat.data_kursu_towar.data else '' }}">
+                        <input type="date" id="data_kursu_towar" name="data_kursu_towar" value="{{ form_vat.data_kursu_towar.data if form_vat.data_kursu_towar.data else '' }}">
                     </div>
                     
                     <div id="waluta-towar-wlasny" class="waluta-typ" style="display:none;">
-                        <label for="kurs_waluty_towar">Kurs waluty (1 waluta = X PLN):</label>
+                        <label for="kurs_waluty_towar">Kurs waluty (1 wal = X PLN):</label>
                         {{ form_vat.kurs_waluty_towar() }}
                     </div>
                 </div>
-                <label>
-                    {{ form_vat.inna_waluta_dostawa() }} Inna waluta niż PLN (dostawa)
-                </label>
+                
+                <label>{{ form_vat.inna_waluta_dostawa() }} Inna waluta niż PLN (dostawa)</label>
                 <div id="waluta-container-dostawa" class="waluta-container">
                     <label for="typ_kursu_dostawa">Typ kursu:</label>
                     {{ form_vat.typ_kursu_dostawa() }}
                     
                     <div id="waluta-dostawa-aktualny" class="waluta-typ">
-                        <label for="waluta_dostawa">Waluta:</label>
+                        <label for="waluta_dostawa_select">Waluta:</label>
                         <select id="waluta_dostawa_select" name="waluta_dostawa">
-                            <option value="USD">USD (dolar amerykański)</option>
-                            <option value="EUR">EUR (euro)</option>
-                            <option value="GBP">GBP (funt brytyjski)</option>
+                            <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
                         </select>
                     </div>
                     
                     <div id="waluta-dostawa-historyczny" class="waluta-typ" style="display:none;">
-                        <label for="waluta_dostawa">Waluta:</label>
+                        <label for="waluta_dostawa_historyczny_select">Waluta:</label>
                         <select id="waluta_dostawa_historyczny_select" name="waluta_dostawa">
-                            <option value="USD">USD (dolar amerykański)</option>
-                            <option value="EUR">EUR (euro)</option>
-                            <option value="GBP">GBP (funt brytyjski)</option>
+                            <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
                         </select>
                         <label for="data_kursu_dostawa">Data kursu (RRRR-MM-DD):</label>
-                        <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" 
-                               value="{{ form_vat.data_kursu_dostawa.data if form_vat.data_kursu_dostawa.data else '' }}">
+                        <input type="date" id="data_kursu_dostawa" name="data_kursu_dostawa" value="{{ form_vat.data_kursu_dostawa.data if form_vat.data_kursu_dostawa.data else '' }}">
                     </div>
                     
                     <div id="waluta-dostawa-wlasny" class="waluta-typ" style="display:none;">
-                        <label for="kurs_waluty_dostawa">Kurs waluty (1 waluta = X PLN):</label>
+                        <label for="kurs_waluty_dostawa">Kurs waluty (1 wal = X PLN):</label>
                         {{ form_vat.kurs_waluty_dostawa() }}
                     </div>
                 </div>
@@ -592,13 +596,13 @@
         let lastWalutaDostawa = null;
         let historiaDanych = {{ historia_marz | tojson | safe if historia_marz else '[]' }};
 
-        function toggleInnaProwizja() {
-            const kategoria = document.getElementById("kategoria");
+        function toggleInnaProwizja(prefix = "") {
+            const kategoria = document.getElementById(prefix ? kategoria_zakup : "kategoria");
             if (!kategoria) return;
             
             const kategoriaValue = kategoria.value;
-            const innaProwizjaDiv = document.getElementById("inna-prowizja-div");
-            const kategoriaPodstawowaDiv = document.getElementById("kategoria-podstawowa-div");
+            const innaProwizjaDiv = document.getElementById(prefix ? "inna-prowizja-zakup-div" : "inna-prowizja-div");
+            const kategoriaPodstawowaDiv = document.getElementById(prefix ? "kategoria-podstawowa-zakup-div" : "kategoria-podstawowa-div");
             
             if (kategoriaValue === "H") {
                 innaProwizjaDiv.style.display = "block";
@@ -612,11 +616,12 @@
             }
         }
 
-        function toggleTrybSmart() {
-            const czySmart = document.querySelector('input[name="czy_smart"]');
+        function toggleTrybSmart(prefix = "") {
+            const checkboxName = prefix ? "czy_smart_zakup" : "czy_smart";
+            const czySmart = document.querySelector(`input[name="${checkboxName}"]`);
             if (!czySmart) return;
             
-            const trybNieSmartDiv = document.getElementById("tryb-nie-smart-div");
+            const trybNieSmartDiv = document.getElementById(prefix ? "tryb-nie-smart-zakup-div" : "tryb-nie-smart-div");
             
             if (!czySmart.checked) {
                 trybNieSmartDiv.style.display = "block";
@@ -625,34 +630,32 @@
             }
         }
 
-        function toggleWiecejOpcji() {
-            const wiecejOpcji = document.getElementById("wiecej-opcji");
-            const przycisk = document.querySelector('.toggle-wiecej-opcji');
+        function toggleWiecejOpcji(divId, btn) {
+            const wiecejOpcji = document.getElementById(divId);
             
             if (wiecejOpcji.style.display === "none" || wiecejOpcji.style.display === "") {
                 wiecejOpcji.style.display = "block";
-                przycisk.classList.add('otwarty');
-                przycisk.innerHTML = '▲ Więcej opcji';
+                btn.classList.add('otwarty');
+                btn.innerHTML = '▲ Więcej opcji';
             } else {
                 wiecejOpcji.style.display = "none";
-                przycisk.classList.remove('otwarty');
-                przycisk.innerHTML = '▼ Więcej opcji';
+                btn.classList.remove('otwarty');
+                btn.innerHTML = '▼ Więcej opcji';
             }
         }
 
-        function toggleSymulacja() {
+        function toggleSymulacja(btn) {
             const symulacja = document.getElementById("symulacja");
-            const przycisk = event.target;
             
             if (symulacja.style.display === "none" || symulacja.style.display === "") {
                 symulacja.style.display = "block";
-                przycisk.classList.add('otwarty');
-                przycisk.innerHTML = '▲ Symulacja dla różnych ilości sztuk';
+                btn.classList.add('otwarty');
+                btn.innerHTML = '▲ Symulacja dla różnych ilości sztuk';
                 generujSymulacje();
             } else {
                 symulacja.style.display = "none";
-                przycisk.classList.remove('otwarty');
-                przycisk.innerHTML = '▼ Symulacja dla różnych ilości sztuk';
+                btn.classList.remove('otwarty');
+                btn.innerHTML = '▼ Symulacja dla różnych ilości sztuk';
             }
         }
 
@@ -692,44 +695,25 @@
             if (!typKursuSelect) return;
             
             const typKursu = typKursuSelect.value;
-            
             document.getElementById(`waluta-${typ}-aktualny`).style.display = "none";
             document.getElementById(`waluta-${typ}-historyczny`).style.display = "none";
             document.getElementById(`waluta-${typ}-wlasny`).style.display = "none";
             
-            if (typKursu === "aktualny") {
-                document.getElementById(`waluta-${typ}-aktualny`).style.display = "block";
-            } else if (typKursu === "historyczny") {
-                document.getElementById(`waluta-${typ}-historyczny`).style.display = "block";
-            } else if (typKursu === "wlasny") {
-                document.getElementById(`waluta-${typ}-wlasny`).style.display = "block";
-            }
+            if (typKursu === "aktualny") document.getElementById(`waluta-${typ}-aktualny`).style.display = "block";
+            else if (typKursu === "historyczny") document.getElementById(`waluta-${typ}-historyczny`).style.display = "block";
+            else if (typKursu === "wlasny") document.getElementById(`waluta-${typ}-wlasny`).style.display = "block";
         }
 
         function synchronizujWaluty(typ, event) {
             const changedSelect = event.target;
             const selects = document.querySelectorAll(`select[id^="waluta_${typ}"]`);
-            
-            selects.forEach(select => {
-                if (select !== changedSelect) {
-                    select.value = changedSelect.value;
-                }
-            });
-            
-            if (typ === 'towar') {
-                lastWalutaTowar = changedSelect.value;
-            } else {
-                lastWalutaDostawa = changedSelect.value;
-            }
+            selects.forEach(select => { if (select !== changedSelect) select.value = changedSelect.value; });
+            if (typ === 'towar') lastWalutaTowar = changedSelect.value;
+            else lastWalutaDostawa = changedSelect.value;
         }
 
         function toggleDarkMode() {
-            fetch('/toggle_dark_mode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
+            fetch('/toggle_dark_mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }})
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -752,18 +736,14 @@
                 hr: '#ccc', red: '#ff0000', green: '#008000', blue: '#0000ff', orange: '#ffa500'
             };
 
-            document.documentElement.style.setProperty('--bg-color', colors.bg);
-            document.documentElement.style.setProperty('--text-color', colors.text);
-            document.documentElement.style.setProperty('--table-header-bg', colors.tableHeader);
-            document.documentElement.style.setProperty('--table-border', colors.tableBorder);
-            document.documentElement.style.setProperty('--container-bg', colors.containerBg);
-            document.documentElement.style.setProperty('--container-border', colors.containerBorder);
-            document.documentElement.style.setProperty('--hr-color', colors.hr);
-            document.documentElement.style.setProperty('--red-color', colors.red);
-            document.documentElement.style.setProperty('--green-color', colors.green);
-            document.documentElement.style.setProperty('--blue-color', colors.blue);
-            document.documentElement.style.setProperty('--orange-color', colors.orange);
-            
+            for (const [key, value] of Object.entries(colors)) {
+                let cssKey = '--' + key.replace(/([A-Z])/g, "-$1").toLowerCase() + (key.length <= 4 && key !== 'text' && key !== 'bg' && key !== 'hr' ? '-color' : (key.includes('Color')||key.includes('Border')||key.includes('Header')||key.includes('Bg') ? '' : '-color'));
+                if (key === 'tableHeader') cssKey = '--table-header-bg';
+                if (key === 'containerBg') cssKey = '--container-bg';
+                if (key === 'containerBorder') cssKey = '--container-border';
+                if (key === 'tableBorder') cssKey = '--table-border';
+                document.documentElement.style.setProperty(cssKey, value);
+            }
             document.documentElement.style.setProperty('--dark-mode-invert', isDarkMode ? '1' : '0');
         }
 
@@ -774,18 +754,10 @@
             potwierdzenie.textContent = '✓';
             element.appendChild(potwierdzenie);
             potwierdzenie.style.display = 'inline';
-            
-            setTimeout(() => {
-                potwierdzenie.style.display = 'none';
-            }, 2000);
+            setTimeout(() => { potwierdzenie.style.display = 'none'; }, 2000);
 
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(wartosc).catch(() => {
-                    kopiujFallback(wartosc);
-                });
-            } else {
-                kopiujFallback(wartosc);
-            }
+            if (navigator.clipboard) { navigator.clipboard.writeText(wartosc).catch(() => { kopiujFallback(wartosc); });
+            } else { kopiujFallback(wartosc); }
         }
 
         function kopiujFallback(wartosc) {
@@ -800,32 +772,32 @@
 
         function wczytajZHistorii(index) {
             if (!historiaDanych || !historiaDanych[index]) return;
-            
             const wpis = historiaDanych[index];
-            if (wpis) {
-                const cenaZakupu = document.getElementById('cena_zakupu');
-                const mnoznikZakupu = document.getElementById('mnoznik_zakupu');
-                const cenaSprzedazy = document.getElementById('cena_sprzedazy');
-                const mnoznikSprzedazy = document.getElementById('mnoznik_sprzedazy');
-                const kategoria = document.getElementById('kategoria');
-                const czySmart = document.querySelector('input[name="czy_smart"]');
-                const marzaKwota = document.getElementById('marza_kwota');
-                const marzaProcent = document.getElementById('marza_procent');
-                const kosztPakowania = document.getElementById('koszt_pakowania');
-                
-                if (cenaZakupu) cenaZakupu.value = wpis.cena_zakupu || '';
-                if (mnoznikZakupu) mnoznikZakupu.value = wpis.mnoznik_zakupu || '1';
-                if (cenaSprzedazy) cenaSprzedazy.value = wpis.cena_sprzedazy || '';
-                if (mnoznikSprzedazy) mnoznikSprzedazy.value = wpis.mnoznik_sprzedazy || '1';
-                if (kategoria) kategoria.value = wpis.kategoria || '';
-                if (czySmart) czySmart.checked = wpis.czy_smart || false;
-                if (marzaKwota) marzaKwota.value = wpis.marza_kwota || '';
-                if (marzaProcent) marzaProcent.value = wpis.marza_procent || '';
-                if (kosztPakowania) kosztPakowania.value = wpis.koszt_pakowania || 0;
-                
-                toggleInnaProwizja();
-                toggleTrybSmart();
-            }
+            
+            const fields = {
+                cenaZakupu: document.getElementById('cena_zakupu'),
+                mnoznikZakupu: document.getElementById('mnoznik_zakupu'),
+                cenaSprzedazy: document.getElementById('cena_sprzedazy'),
+                mnoznikSprzedazy: document.getElementById('mnoznik_sprzedazy'),
+                kategoria: document.getElementById('kategoria'),
+                czySmart: document.querySelector('input[name="czy_smart"]'),
+                marzaKwota: document.getElementById('marza_kwota'),
+                marzaProcent: document.getElementById('marza_procent'),
+                kosztPakowania: document.getElementById('koszt_pakowania')
+            };
+            
+            if (fields.cenaZakupu) fields.cenaZakupu.value = wpis.cena_zakupu || '';
+            if (fields.mnoznikZakupu) fields.mnoznikZakupu.value = wpis.mnoznik_zakupu || '1';
+            if (fields.cenaSprzedazy) fields.cenaSprzedazy.value = wpis.cena_sprzedazy || '';
+            if (fields.mnoznikSprzedazy) fields.mnoznikSprzedazy.value = wpis.mnoznik_sprzedazy || '1';
+            if (fields.kategoria) fields.kategoria.value = wpis.kategoria || '';
+            if (fields.czySmart) fields.czySmart.checked = wpis.czy_smart || false;
+            if (fields.marzaKwota) fields.marzaKwota.value = wpis.marza_kwota || '';
+            if (fields.marzaProcent) fields.marzaProcent.value = wpis.marza_procent || '';
+            if (fields.kosztPakowania) fields.kosztPakowania.value = wpis.koszt_pakowania || 0;
+            
+            toggleInnaProwizja("");
+            toggleTrybSmart("");
         }
 
         function generujSymulacje() {
@@ -854,16 +826,12 @@
             if (cenaZakupu <= 0 || cenaSprzedazy <= 0) return;
 
             const ilosciSztuk = [];
-            for (let i = 1; i <= 20; i++) {
-                ilosciSztuk.push(i);
-            }
+            for (let i = 1; i <= 20; i++) ilosciSztuk.push(i);
 
             const daneSymulacji = [];
-            
             ilosciSztuk.forEach(ilosc => {
                 const cenaZakupuTotal = cenaZakupu * ilosc;
                 const cenaSprzedazyTotal = cenaSprzedazy * ilosc; 
-                
                 let marzaMin = 0;
                 let marzaMax = 0;
                 
@@ -880,117 +848,43 @@
                 }
                 
                 daneSymulacji.push({
-                    ilosc: ilosc,
-                    cenaSprzedazyTotal: cenaSprzedazyTotal,
-                    marzaMin: marzaMin,
-                    marzaMax: marzaMax,
-                    marzaNaSztukeMin: marzaMin / ilosc,
-                    marzaNaSztukeMax: marzaMax / ilosc,
-                    czyAktualna: ilosc === aktualnaIlosc
+                    ilosc: ilosc, cenaSprzedazyTotal: cenaSprzedazyTotal, marzaMin: marzaMin, marzaMax: marzaMax,
+                    marzaNaSztukeMin: marzaMin / ilosc, marzaNaSztukeMax: marzaMax / ilosc, czyAktualna: ilosc === aktualnaIlosc
                 });
             });
 
             const symulacjaTabelaContainer = document.getElementById('symulacja-tabela-container');
             if (!symulacjaTabelaContainer) return;
             
-            let tabelaHTML = `
-                <table class="symulacja-tabela">
-                    <thead>
-                        <tr>
-                            <th>Ilość sztuk (zestawów)</th>
-                            <th>Cena sprzedaży całkowita</th>
-                            <th>Marża całkowita (min-max)</th>
-                            <th>Marża na zestaw (min-max)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
+            let tabelaHTML = `<table class="symulacja-tabela"><thead><tr><th>Ilość sztuk (zestawów)</th><th>Cena sprzedaży całkowita</th><th>Marża całkowita (min-max)</th><th>Marża na zestaw (min-max)</th></tr></thead><tbody>`;
             daneSymulacji.forEach(dane => {
                 const klasaWiersza = dane.czyAktualna ? 'aktualna-ilosc' : '';
-                tabelaHTML += `
-                    <tr class="${klasaWiersza}">
-                        <td><strong>${dane.ilosc}</strong></td>
-                        <td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td>
-                        <td>${dane.marzaMin.toFixed(2)} - ${dane.marzaMax.toFixed(2)} zł</td>
-                        <td>${dane.marzaNaSztukeMin.toFixed(2)} - ${dane.marzaNaSztukeMax.toFixed(2)} zł</td>
-                    </tr>
-                `;
+                tabelaHTML += `<tr class="${klasaWiersza}"><td><strong>${dane.ilosc}</strong></td><td>${dane.cenaSprzedazyTotal.toFixed(2)} zł</td><td>${dane.marzaMin.toFixed(2)} - ${dane.marzaMax.toFixed(2)} zł</td><td>${dane.marzaNaSztukeMin.toFixed(2)} - ${dane.marzaNaSztukeMax.toFixed(2)} zł</td></tr>`;
             });
-
-            tabelaHTML += `
-                    </tbody>
-                </table>
-            `;
-
+            tabelaHTML += `</tbody></table>`;
             symulacjaTabelaContainer.innerHTML = tabelaHTML;
 
             const ctx = document.getElementById('wykresSymulacji');
             if (!ctx) return;
-            
             const ctxCanvas = ctx.getContext('2d');
-            
-            if (window.symulacjaChart) {
-                window.symulacjaChart.destroy();
-            }
-
-            const etykiety = daneSymulacji.map(d => d.ilosc + ' szt.');
-            const marzeMin = daneSymulacji.map(d => d.marzaMin);
-            const marzeMax = daneSymulacji.map(d => d.marzaMax);
+            if (window.symulacjaChart) window.symulacjaChart.destroy();
 
             window.symulacjaChart = new Chart(ctxCanvas, {
                 type: 'line',
                 data: {
-                    labels: etykiety,
+                    labels: daneSymulacji.map(d => d.ilosc + ' szt.'),
                     datasets: [
-                        {
-                            label: 'Marża minimalna',
-                            data: marzeMin,
-                            borderColor: '#ff6b6b',
-                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                            borderWidth: 2,
-                            fill: false
-                        },
-                        {
-                            label: 'Marża maksymalna',
-                            data: marzeMax,
-                            borderColor: '#4CAF50',
-                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                            borderWidth: 2,
-                            fill: false
-                        }
+                        { label: 'Marża minimalna', data: daneSymulacji.map(d => d.marzaMin), borderColor: '#ff6b6b', backgroundColor: 'rgba(255, 107, 107, 0.1)', borderWidth: 2, fill: false },
+                        { label: 'Marża maksymalna', data: daneSymulacji.map(d => d.marzaMax), borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)', borderWidth: 2, fill: false }
                     ]
                 },
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: 'Marża całkowita w zależności od ilości zestawów'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} zł`;
-                                }
-                            }
-                        }
+                        title: { display: true, text: 'Marża całkowita w zależności od ilości zestawów' },
+                        tooltip: { callbacks: { label: function(c) { return `${c.dataset.label}: ${c.parsed.y.toFixed(2)} zł`; } } }
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Ilość zestawów'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Marża całkowita (zł)'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                    scales: { x: { title: { display: true, text: 'Ilość zestawów' } }, y: { title: { display: true, text: 'Marża całkowita (zł)' }, beginAtZero: true } }
                 }
             });
         }
@@ -1006,7 +900,6 @@
             
             const mnoznikZakupu = parseFloat(mnoznikZakupuEl ? mnoznikZakupuEl.value.replace(',', '.') : 1) || 1;
             const cenaZakupu = (parseFloat(cenaZakupuEl.value.replace(',', '.')) || 0) * mnoznikZakupu;
-            
             const kategoria = kategoriaEl.value;
             const czySmart = czySmartEl.checked;
             const kosztPakowania = parseFloat(kosztPakowaniaEl ? kosztPakowaniaEl.value.replace(',', '.') : 0) || 0;
@@ -1019,7 +912,6 @@
             const krok = cenaZakupu * 0.1; 
             for (let cena = cenaZakupu; cena <= cenaZakupu * 3; cena += krok) {
                 cenySprzedazy.push(cena);
-                
                 let marza = 0;
                 if (czySmart && kategoria !== "G" && kategoria !== "I") {
                     const prowizjaMin = obliczProwizje(kategoria, cena, false);
@@ -1030,62 +922,27 @@
                     const prowizja = obliczProwizje(kategoria, cena, false);
                     marza = cena - cenaZakupu - prowizja - kosztPakowania;
                 }
-                
                 marze.push(marza);
             }
 
             const ctx = document.getElementById('wykresMarzy');
             if (!ctx) return;
-            
             const ctxCanvas = ctx.getContext('2d');
-            
-            if (window.marzaChart) {
-                window.marzaChart.destroy();
-            }
+            if (window.marzaChart) window.marzaChart.destroy();
 
             window.marzaChart = new Chart(ctxCanvas, {
                 type: 'line',
                 data: {
                     labels: cenySprzedazy.map(c => Math.round(c) + ' zł'),
-                    datasets: [{
-                        label: 'Marża (zł)',
-                        data: marze,
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        borderWidth: 2,
-                        fill: true
-                    }]
+                    datasets: [{ label: 'Marża (zł)', data: marze, borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)', borderWidth: 2, fill: true }]
                 },
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: 'Marża w zależności od ceny sprzedaży'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `Marża: ${context.parsed.y.toFixed(2)} zł`; 
-                                }
-                            }
-                        }
+                        title: { display: true, text: 'Marża w zależności od ceny sprzedaży' },
+                        tooltip: { callbacks: { label: function(c) { return `Marża: ${c.parsed.y.toFixed(2)} zł`; } } }
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Cena sprzedaży (zł)'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Marża (zł)'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                    scales: { x: { title: { display: true, text: 'Cena sprzedaży (zł)' } }, y: { title: { display: true, text: 'Marża (zł)' }, beginAtZero: true } }
                 }
             });
         }
@@ -1094,159 +951,75 @@
             let prowizja = 0;
             switch(kategoria) {
                 case "A": prowizja = Math.max(cena * 0.0615, 0.49); break;
-                case "B": prowizja = Math.max(cena * 0.1292, 0.49); break;
-                case "C": prowizja = Math.max(cena * 0.1292, 0.49); break;
+                case "B": case "C": prowizja = Math.max(cena * 0.1292, 0.49); break;
                 case "D": prowizja = Math.max(cena * 0.1353, 0.49); break;
                 case "E": prowizja = Math.max(cena * 0.0555, 0.49); break;
-                case "F": 
-                    prowizja = cena <= 60 ? Math.max(cena * 0.1845, 0.49) : Math.max(11.07 + (cena - 60) * 0.0984, 0.49);
-                    break;
+                case "F": prowizja = cena <= 60 ? Math.max(cena * 0.1845, 0.49) : Math.max(11.07 + (cena - 60) * 0.0984, 0.49); break;
                 case "G": prowizja = Math.max(cena * 0.01, 0.49); break;
                 default: prowizja = Math.max(cena * 0.1, 0.49); 
             }
-            
-            if (promowanie && kategoria !== "G" && kategoria !== "I") {
-                prowizja = Math.max(prowizja * 1.75, 0.49);
-            }
-            
+            if (promowanie && kategoria !== "G" && kategoria !== "I") prowizja = Math.max(prowizja * 1.75, 0.49);
             return prowizja;
         }
 
         function obliczKosztDostawyDlaPrzewoznika(cena) {
-            if (cena < 30) {
-                return {
-                    'Allegro Paczkomaty InPost': 0,
-                    'Allegro Automat Pocztex': 0,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 0,
-                    'Allegro Kurier UPS': 0,
-                    'Allegro Kurier DHL (Allegro Delivery)': 0,
-                    'Allegro Kurier Pocztex': 0,
-                    'Allegro One Kurier (Allegro Delivery)': 0
-                };
-            } else if (cena >= 30 && cena < 45) {
-                return {
-                    'Allegro Paczkomaty InPost': 1.59,
-                    'Allegro Automat Pocztex': 1.59,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 0.99,
-                    'Allegro Kurier UPS': 1.99,
-                    'Allegro Kurier DHL (Allegro Delivery)': 1.79,
-                    'Allegro Kurier Pocztex': 1.99,
-                    'Allegro One Kurier (Allegro Delivery)': 1.79
-                };
-            } else if (cena >= 45 && cena < 65) {
-                return {
-                    'Allegro Paczkomaty InPost': 3.19,
-                    'Allegro Automat Pocztex': 3.19,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.99,
-                    'Allegro Kurier UPS': 3.99,
-                    'Allegro Kurier DHL (Allegro Delivery)': 3.69,
-                    'Allegro Kurier Pocztex': 3.99,
-                    'Allegro One Kurier (Allegro Delivery)': 3.69
-                };
-            } else if (cena >= 65 && cena < 100) {
-                return {
-                    'Allegro Paczkomaty InPost': 5.19,
-                    'Allegro Automat Pocztex': 5.19,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.69,
-                    'Allegro Kurier UPS': 6.09,
-                    'Allegro Kurier DHL (Allegro Delivery)': 5.59,
-                    'Allegro Kurier Pocztex': 6.09,
-                    'Allegro One Kurier (Allegro Delivery)': 5.59
-                };
-            } else if (cena >= 100 && cena < 150) {
-                return {
-                    'Allegro Paczkomaty InPost': 7.89,
-                    'Allegro Automat Pocztex': 7.89,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89,
-                    'Allegro Kurier UPS': 9.49,
-                    'Allegro Kurier DHL (Allegro Delivery)': 8.99,
-                    'Allegro Kurier Pocztex': 9.49,
-                    'Allegro One Kurier (Allegro Delivery)': 8.99
-                };
-            } else {  
-                return {
-                    'Allegro Paczkomaty InPost': 9.99,
-                    'Allegro Automat Pocztex': 9.99,
-                    'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.99,
-                    'Allegro Kurier UPS': 11.89,
-                    'Allegro Kurier DHL (Allegro Delivery)': 11.29,
-                    'Allegro Kurier Pocztex': 11.89,
-                    'Allegro One Kurier (Allegro Delivery)': 11.29
-                };
-            }
+            if (cena < 30) return { 'Allegro Paczkomaty InPost': 0, 'Allegro Automat Pocztex': 0, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 0, 'Allegro Kurier UPS': 0, 'Allegro Kurier DHL (Allegro Delivery)': 0, 'Allegro Kurier Pocztex': 0, 'Allegro One Kurier (Allegro Delivery)': 0 };
+            else if (cena >= 30 && cena < 45) return { 'Allegro Paczkomaty InPost': 1.59, 'Allegro Automat Pocztex': 1.59, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 0.99, 'Allegro Kurier UPS': 1.99, 'Allegro Kurier DHL (Allegro Delivery)': 1.79, 'Allegro Kurier Pocztex': 1.99, 'Allegro One Kurier (Allegro Delivery)': 1.79 };
+            else if (cena >= 45 && cena < 65) return { 'Allegro Paczkomaty InPost': 3.19, 'Allegro Automat Pocztex': 3.19, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 1.99, 'Allegro Kurier UPS': 3.99, 'Allegro Kurier DHL (Allegro Delivery)': 3.69, 'Allegro Kurier Pocztex': 3.99, 'Allegro One Kurier (Allegro Delivery)': 3.69 };
+            else if (cena >= 65 && cena < 100) return { 'Allegro Paczkomaty InPost': 5.19, 'Allegro Automat Pocztex': 5.19, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 3.69, 'Allegro Kurier UPS': 6.09, 'Allegro Kurier DHL (Allegro Delivery)': 5.59, 'Allegro Kurier Pocztex': 6.09, 'Allegro One Kurier (Allegro Delivery)': 5.59 };
+            else if (cena >= 100 && cena < 150) return { 'Allegro Paczkomaty InPost': 7.89, 'Allegro Automat Pocztex': 7.89, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89, 'Allegro Kurier UPS': 9.49, 'Allegro Kurier DHL (Allegro Delivery)': 8.99, 'Allegro Kurier Pocztex': 9.49, 'Allegro One Kurier (Allegro Delivery)': 8.99 };
+            else return { 'Allegro Paczkomaty InPost': 9.99, 'Allegro Automat Pocztex': 9.99, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.99, 'Allegro Kurier UPS': 11.89, 'Allegro Kurier DHL (Allegro Delivery)': 11.29, 'Allegro Kurier Pocztex': 11.89, 'Allegro One Kurier (Allegro Delivery)': 11.29 };
         }
 
         function initKategoriaListeners() {
             const kategoriaEl = document.getElementById('kategoria');
+            const kategoriaZakupEl = document.getElementById('kategoria_zakup');
+            
             if (kategoriaEl) {
                 kategoriaEl.addEventListener('change', function() {
-                    toggleInnaProwizja();
-                    const kategoriaValue = this.value;
+                    toggleInnaProwizja("");
                     const innaProwizjaInput = document.getElementById('inna_prowizja');
-                    const kategoriaPodstawowaSelect = document.getElementById('kategoria_podstawowa');
-                    
-                    if (kategoriaValue === 'H') {
-                        if (innaProwizjaInput) innaProwizjaInput.value = '';
-                    } else if (kategoriaValue === 'I') {
-                        if (kategoriaPodstawowaSelect) kategoriaPodstawowaSelect.value = 'A';
-                    }
+                    const katPodstawowaSelect = document.getElementById('kategoria_podstawowa');
+                    if (this.value === 'H' && innaProwizjaInput) innaProwizjaInput.value = '';
+                    else if (this.value === 'I' && katPodstawowaSelect) katPodstawowaSelect.value = 'A';
                 });
-                
-                toggleInnaProwizja();
+                toggleInnaProwizja("");
             }
+            if (kategoriaZakupEl) {
+                kategoriaZakupEl.addEventListener('change', function() {
+                    toggleInnaProwizja("zakup");
+                    const innaProwizjaInput = document.getElementById('inna_prowizja_zakup');
+                    const katPodstawowaSelect = document.getElementById('kategoria_podstawowa_zakup');
+                    if (this.value === 'H' && innaProwizjaInput) innaProwizjaInput.value = '';
+                    else if (this.value === 'I' && katPodstawowaSelect) katPodstawowaSelect.value = 'A';
+                });
+                toggleInnaProwizja("zakup");
+            }
+            
+            const czySmartZakup = document.querySelector('input[name="czy_smart_zakup"]');
+            if (czySmartZakup) czySmartZakup.addEventListener('change', () => toggleTrybSmart("zakup"));
+            
+            const czySmart = document.querySelector('input[name="czy_smart"]');
+            if (czySmart) czySmart.addEventListener('change', () => toggleTrybSmart(""));
         }
 
         function initWaluty() {
-            const innaWalutaTowarCheckbox = document.querySelector('input[name="inna_waluta_towar"]');
-            const walutaTowarSelects = document.querySelectorAll('select[id^="waluta_towar"]');
-            
-            if (innaWalutaTowarCheckbox && walutaTowarSelects.length > 0) {
-                innaWalutaTowarCheckbox.addEventListener('change', function() {
-                    toggleWaluta('towar');
-                });
-                
-                walutaTowarSelects.forEach(select => {
-                    select.addEventListener('change', function(event) {
-                        synchronizujWaluty('towar', event);
-                    });
-                });
-                
-                toggleWaluta('towar');
-            }
-            
-            const innaWalutaDostawaCheckbox = document.querySelector('input[name="inna_waluta_dostawa"]');
-            const walutaDostawaSelects = document.querySelectorAll('select[id^="waluta_dostawa"]');
-            
-            if (innaWalutaDostawaCheckbox && walutaDostawaSelects.length > 0) {
-                innaWalutaDostawaCheckbox.addEventListener('change', function() {
-                    toggleWaluta('dostawa');
-                });
-                
-                walutaDostawaSelects.forEach(select => {
-                    select.addEventListener('change', function(event) {
-                        synchronizujWaluty('dostawa', event);
-                    });
-                });
-                
-                toggleWaluta('dostawa');
-            }
-            
-            const typKursuTowarSelect = document.querySelector('select[name="typ_kursu_towar"]');
-            const typKursuDostawaSelect = document.querySelector('select[name="typ_kursu_dostawa"]');
-            
-            if (typKursuTowarSelect) {
-                typKursuTowarSelect.addEventListener('change', function() {
-                    toggleTypKursu('towar');
-                });
-                toggleTypKursu('towar');
-            }
-            
-            if (typKursuDostawaSelect) {
-                typKursuDostawaSelect.addEventListener('change', function() {
-                    toggleTypKursu('dostawa');
-                });
-                toggleTypKursu('dostawa');
-            }
+            const initWalutaGrupa = (typ) => {
+                const cb = document.querySelector(`input[name="inna_waluta_${typ}"]`);
+                const selects = document.querySelectorAll(`select[id^="waluta_${typ}"]`);
+                if (cb && selects.length > 0) {
+                    cb.addEventListener('change', () => toggleWaluta(typ));
+                    selects.forEach(s => s.addEventListener('change', (e) => synchronizujWaluty(typ, e)));
+                    toggleWaluta(typ);
+                }
+                const typSelect = document.querySelector(`select[name="typ_kursu_${typ}"]`);
+                if (typSelect) {
+                    typSelect.addEventListener('change', () => toggleTypKursu(typ));
+                    toggleTypKursu(typ);
+                }
+            };
+            initWalutaGrupa('towar');
+            initWalutaGrupa('dostawa');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1256,55 +1029,32 @@
             
             initKategoriaListeners();
             initWaluty();
-            toggleTrybSmart();
+            toggleTrybSmart("");
+            toggleTrybSmart("zakup");
             
             const savedWalutaTowar = sessionStorage.getItem('lastWalutaTowar');
             const savedWalutaDostawa = sessionStorage.getItem('lastWalutaDostawa');
             
-            if (savedWalutaTowar) {
-                lastWalutaTowar = savedWalutaTowar;
-                document.querySelectorAll('select[id^="waluta_towar"]').forEach(select => {
-                    if (select) select.value = savedWalutaTowar;
-                });
-            }
-            
-            if (savedWalutaDostawa) {
-                lastWalutaDostawa = savedWalutaDostawa;
-                document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(select => {
-                    if (select) select.value = savedWalutaDostawa;
-                });
-            }
+            if (savedWalutaTowar) { lastWalutaTowar = savedWalutaTowar; document.querySelectorAll('select[id^="waluta_towar"]').forEach(s => { if(s) s.value = savedWalutaTowar; }); }
+            if (savedWalutaDostawa) { lastWalutaDostawa = savedWalutaDostawa; document.querySelectorAll('select[id^="waluta_dostawa"]').forEach(s => { if(s) s.value = savedWalutaDostawa; }); }
             
             const vatForm = document.getElementById('vatForm');
             if (vatForm) {
                 vatForm.addEventListener('submit', function() {
                     const innaWalutaTowar = document.querySelector('input[name="inna_waluta_towar"]');
                     const innaWalutaDostawa = document.querySelector('input[name="inna_waluta_dostawa"]');
-                    
-                    if (innaWalutaTowar && innaWalutaTowar.checked) {
-                        sessionStorage.setItem('lastWalutaTowar', lastWalutaTowar);
-                    }
-                    if (innaWalutaDostawa && innaWalutaDostawa.checked) {
-                        sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
-                    }
+                    if (innaWalutaTowar && innaWalutaTowar.checked) sessionStorage.setItem('lastWalutaTowar', lastWalutaTowar);
+                    if (innaWalutaDostawa && innaWalutaDostawa.checked) sessionStorage.setItem('lastWalutaDostawa', lastWalutaDostawa);
                 });
             }
 
-            const cenaZakupuEl = document.getElementById('cena_zakupu');
-            const mnoznikZakupuEl = document.getElementById('mnoznik_zakupu');
-            const cenaSprzedazyEl = document.getElementById('cena_sprzedazy');
-            const mnoznikSprzedazyEl = document.getElementById('mnoznik_sprzedazy');
-            const kategoriaEl = document.getElementById('kategoria');
+            const inputsToWatch = ['cena_zakupu', 'mnoznik_zakupu', 'cena_sprzedazy', 'mnoznik_sprzedazy', 'kategoria', 'koszt_pakowania'];
+            inputsToWatch.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', generujWykresMarzy);
+            });
             const czySmartEl = document.querySelector('input[name="czy_smart"]');
-            const kosztPakowaniaEl = document.getElementById('koszt_pakowania');
-            
-            if (cenaZakupuEl) cenaZakupuEl.addEventListener('input', generujWykresMarzy);
-            if (mnoznikZakupuEl) mnoznikZakupuEl.addEventListener('input', generujWykresMarzy);
-            if (cenaSprzedazyEl) cenaSprzedazyEl.addEventListener('input', generujWykresMarzy);
-            if (mnoznikSprzedazyEl) mnoznikSprzedazyEl.addEventListener('input', generujWykresMarzy);
-            if (kategoriaEl) kategoriaEl.addEventListener('change', generujWykresMarzy);
             if (czySmartEl) czySmartEl.addEventListener('change', generujWykresMarzy);
-            if (kosztPakowaniaEl) kosztPakowaniaEl.addEventListener('input', generujWykresMarzy);
 
             setTimeout(generujWykresMarzy, 1000);
         });
