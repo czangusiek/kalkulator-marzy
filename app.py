@@ -1,17 +1,15 @@
 import os
-from flask import Flask, request, render_template, session, redirect, url_for, jsonify, send_from_directory
+from flask import Flask, request, render_template, session, jsonify, send_from_directory
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, TextAreaField, FileField
+from wtforms import StringField, SelectField, SubmitField, BooleanField, IntegerField, FileField
 from wtforms.validators import DataRequired, Optional, NumberRange
 from datetime import datetime, timedelta
 import requests
 import difflib
-import json
 import csv
 import io
-from werkzeug.utils import secure_filename
-
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
@@ -19,83 +17,63 @@ app.secret_key = 'tajny_klucz'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
 
+# Globalny cache na kursy walut, aby nie spowalniać ładowania strony
+rates_cache = {'EUR': None, 'CZK': None, 'GBP': None, 'last_update': None}
+
 def pobierz_kurs_waluty(waluta, data=None):
     try:
-        if waluta == 'USD':
-            kod = 'USD'
-        elif waluta == 'EUR':
-            kod = 'EUR'
-        elif waluta == 'GBP':
-            kod = 'GBP'
-        else:
-            return None
+        if waluta == 'USD': kod = 'USD'
+        elif waluta == 'EUR': kod = 'EUR'
+        elif waluta == 'GBP': kod = 'GBP'
+        elif waluta == 'CZK': kod = 'CZK'
+        else: return None
         
         if data:
             if datetime.strptime(data, '%Y-%m-%d') > datetime.now():
                 data = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-                
             url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{data}/?format=json"
         else:
             url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/?format=json"
         
         response = requests.get(url)
         if response.status_code == 200:
-            data = response.json()
-            return data['rates'][0]['mid']
-        elif response.status_code == 404:
-            if data:
-                data_dt = datetime.strptime(data, '%Y-%m-%d')
-                for i in range(1, 7):
-                    prev_date = (data_dt - timedelta(days=i)).strftime('%Y-%m-%d')
-                    url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{prev_date}/?format=json"
-                    response = requests.get(url)
-                    if response.status_code == 200:
-                        data = response.json()
-                        return data['rates'][0]['mid']
-            return None
+            return response.json()['rates'][0]['mid']
+        elif response.status_code == 404 and data:
+            data_dt = datetime.strptime(data, '%Y-%m-%d')
+            for i in range(1, 7):
+                prev_date = (data_dt - timedelta(days=i)).strftime('%Y-%m-%d')
+                url = f"http://api.nbp.pl/api/exchangerates/rates/a/{kod}/{prev_date}/?format=json"
+                response = requests.get(url)
+                if response.status_code == 200:
+                    return response.json()['rates'][0]['mid']
         return None
     except Exception as e:
         print(f"Błąd przy pobieraniu kursu: {e}")
         return None
 
+def aktualizuj_cache_walut():
+    now = datetime.now()
+    if rates_cache['last_update'] is None or (now - rates_cache['last_update']).days >= 1:
+        rates_cache['EUR'] = pobierz_kurs_waluty('EUR') or 4.30
+        rates_cache['CZK'] = pobierz_kurs_waluty('CZK') or 0.17
+        rates_cache['GBP'] = pobierz_kurs_waluty('GBP') or 5.00
+        rates_cache['last_update'] = now
+
 @app.route('/toggle_dark_mode', methods=['POST'])
 def toggle_dark_mode():
     session['dark_mode'] = not session.get('dark_mode', False)
     session.modified = True
-    return jsonify({
-        'status': 'success', 
-        'dark_mode': session['dark_mode'],
-        'icon': '🌞' if session['dark_mode'] else '🌓'
-    })
+    return jsonify({'status': 'success', 'dark_mode': session['dark_mode'], 'icon': '🌞' if session['dark_mode'] else '🌓'})
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
 
-# Opcje od 1 do 100 dla mnożnika
 mnoznik_choices = [(str(i), f"{i} szt.") for i in range(1, 101)]
-
-kategorie_choices = [
-    ('A', 'Supermarket (6,15%)'),
-    ('B', 'Cukier (12,92%)'),
-    ('C', 'Chemia gospodarcza (12,92%)'),
-    ('D', 'AGD zwykłe (13,53%)'),
-    ('E', 'Elektronika (5,55%)'),
-    ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
-    ('G', 'Sklep internetowy'),
-    ('H', 'Inna prowizja'),
-    ('I', 'Strefa okazji (+60% prowizji podstawowej)')
-]
-
-kategorie_podst_choices = [
-    ('A', 'Supermarket (6,15%)'),
-    ('B', 'Cukier (12,92%)'),
-    ('C', 'Chemia gospodarcza (12,92%)'),
-    ('D', 'AGD zwykłe (13,53%)'),
-    ('E', 'Elektronika (5,55%)'),
-    ('F', 'Chemia do 60 zł (18,45% / 9,84%)'),
-    ('H', 'Inna prowizja')
-]
+kategorie_choices = [('A', 'Supermarket (6,15%)'), ('B', 'Cukier (12,92%)'), ('C', 'Chemia gospodarcza (12,92%)'), ('D', 'AGD zwykłe (13,53%)'), ('E', 'Elektronika (5,55%)'), ('F', 'Chemia do 60 zł (18,45% / 9,84%)'), ('G', 'Sklep internetowy'), ('H', 'Inna prowizja'), ('I', 'Strefa okazji (+60% prowizji podstawowej)')]
+kategorie_podst_choices = [('A', 'Supermarket (6,15%)'), ('B', 'Cukier (12,92%)'), ('C', 'Chemia gospodarcza (12,92%)'), ('D', 'AGD zwykłe (13,53%)'), ('E', 'Elektronika (5,55%)'), ('F', 'Chemia do 60 zł (18,45% / 9,84%)'), ('H', 'Inna prowizja')]
+waluty_choices = [('PLN', 'PLN'), ('EUR', 'EUR'), ('CZK', 'CZK')]
+vat_choices = [('5', '5%'), ('8', '8%'), ('23', '23%')]
 
 class KalkulatorMarzyForm(FlaskForm):
     cena_zakupu = StringField('Cena zakupu:', validators=[DataRequired()])
@@ -111,22 +89,27 @@ class KalkulatorMarzyForm(FlaskForm):
     koszt_pakowania = StringField('Koszt pakowania (zł):', default="0")
     marza_kwota = StringField('Marża minimalna (zł):', default="2")
     marza_procent = StringField('Marża procentowa (%):', default="15")
+    waluta_zakupu = SelectField('Waluta zakupu:', choices=waluty_choices, default="PLN")
+    waluta_sprzedazy = SelectField('Waluta sprzedaży:', choices=waluty_choices, default="PLN")
     submit = SubmitField('Oblicz marżę')
 
 class KalkulatorZakupuForm(FlaskForm):
     cena_sprzedazy_docelowa = StringField('Docelowa cena sprzedaży:', validators=[DataRequired()])
-    oczekiwana_marza = StringField('Oczekiwana marża (zł):', default="2", validators=[DataRequired()])
+    oczekiwana_marza = StringField('Oczekiwana marża (PLN):', default="2", validators=[DataRequired()])
     kategoria_zakup = SelectField('Kategoria:', choices=kategorie_choices, default="A", validators=[DataRequired()])
     inna_prowizja_zakup = StringField('Procent prowizji:')
     kategoria_podstawowa_zakup = SelectField('Kategoria podst.:', choices=kategorie_podst_choices, default="A", validators=[Optional()])
     czy_smart_zakup = BooleanField('Czy smart?', default=True)
     kwota_dostawy_smart_zakup = StringField('Kwota dostawy:', default="0")
-    koszt_pakowania_zakup = StringField('Koszt pakowania (zł):', default="0")
+    koszt_pakowania_zakup = StringField('Koszt pakowania (PLN):', default="0")
+    waluta_sprzedazy_zakup = SelectField('Waluta sprzedaży:', choices=waluty_choices, default="PLN")
+    waluta_zakupu_zakup = SelectField('Waluta zakupu:', choices=waluty_choices, default="PLN")
+    vat_zakup = SelectField('Stawka VAT zakupu:', choices=vat_choices, default="23")
     submit_zakup = SubmitField('Oblicz cenę zakupu')
 
 class KalkulatorVATForm(FlaskForm):
     cena_netto = StringField('Wpisz cenę netto:', validators=[DataRequired()])
-    vat = SelectField('Wybierz podatek VAT:', choices=[('5', '5%'), ('8', '8%'), ('23', '23%')], default="23", validators=[DataRequired()])
+    vat = SelectField('Wybierz podatek VAT:', choices=vat_choices, default="23", validators=[DataRequired()])
     ilosc_sztuk = IntegerField('Ilość sztuk w cenie netto:', default=1, validators=[NumberRange(min=1)])
     koszt_dostawy_sztuka = StringField('Wpisz koszt dostawy na sztukę:', default="0")
     kwota_dostawy = StringField('Lub wpisz kwotę dostawy:', default="0")
@@ -134,12 +117,12 @@ class KalkulatorVATForm(FlaskForm):
     inna_waluta_towar = BooleanField('Inna waluta niż PLN (towar)', default=False)
     typ_kursu_towar = SelectField('Typ kursu:', choices=[('aktualny', 'Aktualny kurs'), ('historyczny', 'Kurs z dnia'), ('wlasny', 'Własny kurs')], default='aktualny')
     data_kursu_towar = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
-    waluta_towar = SelectField('Waluta:', choices=[('USD', 'USD (dolar amerykański)'), ('EUR', 'EUR (euro)'), ('GBP', 'GBP (funt brytyjski)')], default='USD')
+    waluta_towar = SelectField('Waluta:', choices=[('USD', 'USD (dolar amerykański)'), ('EUR', 'EUR (euro)'), ('GBP', 'GBP (funt brytyjski)'), ('CZK', 'CZK (korona czeska)')], default='USD')
     kurs_waluty_towar = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     inna_waluta_dostawa = BooleanField('Inna waluta niż PLN (dostawa)', default=False)
     typ_kursu_dostawa = SelectField('Typ kursu:', choices=[('aktualny', 'Aktualny kurs'), ('historyczny', 'Kurs z dnia'), ('wlasny', 'Własny kurs')], default='aktualny')
     data_kursu_dostawa = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
-    waluta_dostawa = SelectField('Waluta:', choices=[('USD', 'USD (dolar amerykański)'), ('EUR', 'EUR (euro)'), ('GBP', 'GBP (funt brytyjski)')], default='USD')
+    waluta_dostawa = SelectField('Waluta:', choices=[('USD', 'USD (dolar amerykański)'), ('EUR', 'EUR (euro)'), ('GBP', 'GBP (funt brytyjski)'), ('CZK', 'CZK (korona czeska)')], default='USD')
     kurs_waluty_dostawa = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
     submit = SubmitField('Oblicz VAT')
 
@@ -153,42 +136,33 @@ class KalkulatorZbiorczyForm(FlaskForm):
 def zamien_przecinek_na_kropke(liczba):
     if isinstance(liczba, str):
         liczba = liczba.replace(",", ".")
-        try:
-            return float(liczba)
-        except ValueError:
-            return 0.0
+        try: return float(liczba)
+        except ValueError: return 0.0
     return float(liczba) if liczba else 0.0
 
 def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
     try:
-        if not plik_csv or plik_csv.filename == '':
-            return None, "Nie wybrano pliku"
+        if not plik_csv or plik_csv.filename == '': return None, "Nie wybrano pliku"
         content_bytes = plik_csv.read()
-        if not content_bytes:
-            return None, "Plik jest pusty"
+        if not content_bytes: return None, "Plik jest pusty"
         
         content_str = None
         for encoding in ['utf-8-sig', 'utf-8', 'cp1250', 'iso-8859-2', 'windows-1250', 'latin1']:
             try:
                 content_str = content_bytes.decode(encoding)
                 break
-            except UnicodeDecodeError:
-                continue
-        if content_str is None:
-            content_str = content_bytes.decode('utf-8', errors='replace')
-        
+            except UnicodeDecodeError: continue
+        if content_str is None: content_str = content_bytes.decode('utf-8', errors='replace')
         content_str = content_str.replace('\r\n', '\n').replace('\r', '\n')
         lines = content_str.strip().split('\n')
-        if not lines:
-            return None, "Plik nie zawiera danych"
+        if not lines: return None, "Plik nie zawiera danych"
         
         has_data = False
         for line in lines:
             if line.strip() and any(c.isdigit() for c in line):
                 has_data = True
                 break
-        if not has_data:
-            return None, "Plik nie zawiera danych liczbowych"
+        if not has_data: return None, "Plik nie zawiera danych liczbowych"
         
         first_line = lines[0]
         if ';' in first_line: delimiter = ';'
@@ -222,7 +196,6 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
         for row_num, row in enumerate(rows[start_row:], start=1):
             if not row or all(not cell for cell in row): continue
             row = [str(cell).strip() if cell is not None else '' for cell in row]
-            
             cena_netto = cena_brutto = None
             nazwa = ""
             lp = str(row_num)
@@ -233,24 +206,14 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
                     header_lower = header.lower().strip()
                     value_clean = value.strip()
                     if not value_clean: continue
-                    
                     if 'lp' in header_lower or 'l.p' in header_lower or 'nr' in header_lower or 'id' in header_lower: lp = value_clean
                     elif 'nazwa' in header_lower or 'produkt' in header_lower or 'product' in header_lower: nazwa = value_clean
                     elif 'netto' in header_lower and ('brutto' not in header_lower):
-                        try:
-                            cleaned = value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.')
-                            cena_netto = float(cleaned)
+                        try: cena_netto = float(value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.'))
                         except (ValueError, TypeError): cena_netto = None
-                    elif 'brutto' in header_lower:
-                        try:
-                            cleaned = value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.')
-                            cena_brutto = float(cleaned)
-                        except (ValueError, TypeError): cena_brutto = None
-                    elif 'cena' in header_lower and cena_netto is None and cena_brutto is None:
-                        try:
-                            cleaned = value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.')
-                            cena_brutto = float(cleaned)
-                        except (ValueError, TypeError): cena_brutto = None
+                    elif 'brutto' in header_lower or ('cena' in header_lower and cena_netto is None):
+                        try: cena_brutto = float(value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.'))
+                        except (ValueError, TypeError): pass
             else:
                 for col_num, value in enumerate(row):
                     if not value: continue
@@ -259,8 +222,7 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
                     elif any(c.isalpha() for c in value_clean) and not nazwa: nazwa = value_clean
                     else:
                         try:
-                            cleaned = value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.')
-                            num_val = float(cleaned)
+                            num_val = float(value_clean.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.'))
                             if cena_netto is None: cena_netto = num_val
                             elif cena_brutto is None: cena_brutto = num_val
                         except (ValueError, TypeError): pass
@@ -268,8 +230,7 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
             if not nazwa:
                 for value in row:
                     if value and any(c.isalpha() for c in value):
-                        nazwa = value
-                        break
+                        nazwa = value; break
             if not nazwa: nazwa = f"Produkt {lp}"
             
             if cena_netto is not None and cena_brutto is None: cena_brutto = cena_netto * 1.23
@@ -277,24 +238,15 @@ def przetworz_dane_zbiorcze(plik_csv, kategoria, czy_smart, koszt_pakowania):
             elif cena_netto is None and cena_brutto is None:
                 for value in row:
                     try:
-                        cleaned = value.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.')
-                        num_val = float(cleaned)
-                        cena_brutto = num_val
-                        cena_netto = num_val / 1.23
-                        break
+                        num_val = float(value.replace('zł', '').replace('pln', '').replace(' ', '').replace(',', '.'))
+                        cena_brutto = num_val; cena_netto = num_val / 1.23; break
                     except (ValueError, TypeError): continue
             
             if cena_netto is None or cena_brutto is None: continue
             
-            produkty.append({
-                'lp': lp,
-                'nazwa': nazwa[:100],
-                'cena_netto': round(cena_netto, 2),
-                'cena_brutto': round(cena_brutto, 2)
-            })
+            produkty.append({'lp': lp, 'nazwa': nazwa[:100], 'cena_netto': round(cena_netto, 2), 'cena_brutto': round(cena_brutto, 2)})
         return produkty, None
-    except Exception as e:
-        return None, f"Błąd przetwarzania pliku: {str(e)}"
+    except Exception as e: return None, f"Błąd przetwarzania pliku: {str(e)}"
 
 def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=True, koszt_pakowania=0):
     koszt_pakowania = zamien_przecinek_na_kropke(koszt_pakowania) if koszt_pakowania else 0
@@ -313,25 +265,12 @@ def oblicz_marze_dla_produktu(cena_zakupu, cena_sprzedazy, kategoria, czy_smart=
         elif 65 <= cena_sprzedazy < 100: dostawa_min, dostawa_max = 3.69, 6.09
         elif 100 <= cena_sprzedazy < 150: dostawa_min, dostawa_max = 6.19, 9.49
         else: dostawa_min, dostawa_max = 7.99, 11.89
-        
         marza_max = cena_sprzedazy - cena_zakupu - prowizja - dostawa_min - koszt_pakowania
         marza_min = cena_sprzedazy - cena_zakupu - prowizja - dostawa_max - koszt_pakowania
-        return {
-            'prowizja': prowizja, 'dostawa_min': dostawa_min, 'dostawa_max': dostawa_max,
-            'marza_min': marza_min, 'marza_max': marza_max, 'marza_najgorsza': marza_min,
-            'marza_procent_min': (marza_min / cena_zakupu * 100) if cena_zakupu > 0 else 0,
-            'marza_procent_max': (marza_max / cena_zakupu * 100) if cena_zakupu > 0 else 0,
-            'koszt_pakowania': koszt_pakowania
-        }
+        return {'prowizja': prowizja, 'dostawa_min': dostawa_min, 'dostawa_max': dostawa_max, 'marza_min': marza_min, 'marza_max': marza_max, 'marza_najgorsza': marza_min, 'marza_procent_min': (marza_min / cena_zakupu * 100) if cena_zakupu > 0 else 0, 'marza_procent_max': (marza_max / cena_zakupu * 100) if cena_zakupu > 0 else 0, 'koszt_pakowania': koszt_pakowania}
     else:
         marza = cena_sprzedazy - cena_zakupu - prowizja - koszt_pakowania
-        return {
-            'prowizja': prowizja, 'dostawa_min': 0, 'dostawa_max': 0,
-            'marza_min': marza, 'marza_max': marza, 'marza_najgorsza': marza,
-            'marza_procent_min': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0,
-            'marza_procent_max': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0,
-            'koszt_pakowania': koszt_pakowania
-        }
+        return {'prowizja': prowizja, 'dostawa_min': 0, 'dostawa_max': 0, 'marza_min': marza, 'marza_max': marza, 'marza_najgorsza': marza, 'marza_procent_min': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0, 'marza_procent_max': (marza / cena_zakupu * 100) if cena_zakupu > 0 else 0, 'koszt_pakowania': koszt_pakowania}
 
 def oblicz_prowizje(kategoria, cena_sprzedazy, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
     if kategoria == "A": prowizja_podstawowa = max(cena_sprzedazy * 0.0615, 0.49)
@@ -380,8 +319,8 @@ def oblicz_koszt_dostawy_dla_przewoznika(cena_sprzedazy):
     elif 100 <= cena_sprzedazy < 150: return {'Allegro Paczkomaty InPost': 7.89, 'Allegro Automat Pocztex': 7.89, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 5.89, 'Allegro Kurier UPS': 9.49, 'Allegro Kurier DHL (Allegro Delivery)': 8.99, 'Allegro Kurier Pocztex': 9.49, 'Allegro One Kurier (Allegro Delivery)': 8.99}
     else: return {'Allegro Paczkomaty InPost': 9.99, 'Allegro Automat Pocztex': 9.99, 'Allegro One Punkt, Orlen Punkt, DHL BOX': 7.99, 'Allegro Kurier UPS': 11.89, 'Allegro Kurier DHL (Allegro Delivery)': 11.29, 'Allegro Kurier Pocztex': 11.89, 'Allegro One Kurier (Allegro Delivery)': 11.29}
 
-def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
-    sugerowana_cena = cena_zakupu
+def oblicz_sugerowana_cene(cena_zakupu_pln, kategoria, marza_procent=None, marza_kwota=None, promowanie=False, inna_prowizja=None, kategoria_podstawowa=None):
+    sugerowana_cena = cena_zakupu_pln
     if marza_kwota: sugerowana_cena += marza_kwota
     elif marza_procent: sugerowana_cena /= (1 - marza_procent / 100)
 
@@ -390,9 +329,9 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
         dostawa_maksymalna = oblicz_dostawe_maksymalna(sugerowana_cena)
         opłaty_max = prowizja_max + dostawa_maksymalna
         
-        if marza_kwota: nowa_sugerowana_cena = cena_zakupu + opłaty_max + marza_kwota
-        elif marza_procent: nowa_sugerowana_cena = (cena_zakupu + opłaty_max) / (1 - marza_procent / 100)
-        else: nowa_sugerowana_cena = cena_zakupu + opłaty_max
+        if marza_kwota: nowa_sugerowana_cena = cena_zakupu_pln + opłaty_max + marza_kwota
+        elif marza_procent: nowa_sugerowana_cena = (cena_zakupu_pln + opłaty_max) / (1 - marza_procent / 100)
+        else: nowa_sugerowana_cena = cena_zakupu_pln + opłaty_max
 
         if abs(nowa_sugerowana_cena - sugerowana_cena) < 0.01: break
         sugerowana_cena = nowa_sugerowana_cena
@@ -401,13 +340,16 @@ def oblicz_sugerowana_cene(cena_zakupu, kategoria, marza_procent=None, marza_kwo
 @app.route("/", methods=["GET", "POST"])
 def index():
     if 'dark_mode' not in session: session['dark_mode'] = False
-        
+    
+    aktualizuj_cache_walut()
+    
     form_marza = KalkulatorMarzyForm()
     form_zakup = KalkulatorZakupuForm()
     form_vat = KalkulatorVATForm()
 
-    if not form_marza.czy_smart.data and request.method == 'GET': form_marza.czy_smart.data = True
-    if not form_zakup.czy_smart_zakup.data and request.method == 'GET': form_zakup.czy_smart_zakup.data = True
+    if request.method == 'GET': 
+        form_marza.czy_smart.data = True
+        form_zakup.czy_smart_zakup.data = True
 
     if 'historia_marz' not in session: session['historia_marz'] = []
 
@@ -423,8 +365,15 @@ def index():
         cena_sprzedazy_wpis = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
         mnoznik_sprzedazy = zamien_przecinek_na_kropke(form_marza.mnoznik_sprzedazy.data)
         
-        cena_zakupu = cena_zakupu_wpis * (mnoznik_zakupu if mnoznik_zakupu else 1)
-        cena_sprzedazy = cena_sprzedazy_wpis * (mnoznik_sprzedazy if mnoznik_sprzedazy else 1)
+        waluta_z = form_marza.waluta_zakupu.data
+        waluta_s = form_marza.waluta_sprzedazy.data
+        
+        kurs_z = 1.0 if waluta_z == 'PLN' else (rates_cache.get(waluta_z) or pobierz_kurs_waluty(waluta_z) or 1.0)
+        kurs_s = 1.0 if waluta_s == 'PLN' else (rates_cache.get(waluta_s) or pobierz_kurs_waluty(waluta_s) or 1.0)
+
+        # Przeliczenie na PLN do kalkulacji wewnętrznych
+        cena_zakupu_pln = cena_zakupu_wpis * (mnoznik_zakupu if mnoznik_zakupu else 1) * kurs_z
+        cena_sprzedazy_pln = cena_sprzedazy_wpis * (mnoznik_sprzedazy if mnoznik_sprzedazy else 1) * kurs_s
 
         kategoria = form_marza.kategoria.data
         inna_prowizja = form_marza.inna_prowizja.data
@@ -436,10 +385,17 @@ def index():
         marza_kwota = zamien_przecinek_na_kropke(form_marza.marza_kwota.data) if form_marza.marza_kwota.data else 2
         marza_procent = zamien_przecinek_na_kropke(form_marza.marza_procent.data) if form_marza.marza_procent.data else 15
 
-        cena_zakupu_total = cena_zakupu * ilosc_w_zestawie
-        cena_sprzedazy_total = cena_sprzedazy * ilosc_w_zestawie
+        cena_zakupu_total = cena_zakupu_pln * ilosc_w_zestawie
+        cena_sprzedazy_total = cena_sprzedazy_pln * ilosc_w_zestawie
 
         if kategoria == "H" and inna_prowizja: inna_prowizja = zamien_przecinek_na_kropke(inna_prowizja)
+
+        kursy_info_html = ""
+        if waluta_s != 'PLN' or waluta_z != 'PLN':
+            kursy_info_html = "<div style='font-size: 0.9em; margin-bottom: 15px; padding: 10px; background-color: var(--table-header-bg); border-radius: 4px;'>"
+            if waluta_s != 'PLN': kursy_info_html += f"Kurs sprzedaży: 1 {waluta_s} = {kurs_s:.4f} PLN<br>"
+            if waluta_z != 'PLN': kursy_info_html += f"Kurs zakupu: 1 {waluta_z} = {kurs_z:.4f} PLN"
+            kursy_info_html += "</div>"
 
         if not czy_smart and kategoria not in ["G", "I"]:
             cena_sprzedazy_z_dostawa = cena_sprzedazy_total + kwota_dostawy_smart
@@ -452,14 +408,15 @@ def index():
             sugerowana_cena_procent, _ = oblicz_sugerowana_cene(cena_zakupu_total, kategoria, marza_procent=marza_procent, promowanie=False, inna_prowizja=inna_prowizja, kategoria_podstawowa=kategoria_podstawowa)
             
             wynik_bez_promowania = f"""
+            {kursy_info_html}
             <h3>Bez promowania (tryb nie-smart)</h3>
             <div class="wynik">
                 <table>
-                    <tr><th>Marża minimalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_min:.2f}" style="color:var(--green-color);">{marza_min:.2f} zł</span></td></tr>
-                    <tr><th>Marża maksymalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_max:.2f}" style="color:var(--green-color);">{marza_max:.2f} zł</span></td></tr>
-                    <tr><th>Prowizja</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min:.2f}" style="color:var(--red-color);">{prowizja_min:.2f} zł</span></td></tr>
-                    <tr><th>Min sugerowana cena (marża {marza_kwota:.2f} zł)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">{sugerowana_cena_min:.2f} zł</span></td></tr>
-                    <tr><th>Sugerowana cena (marża {marza_procent:.1f}%)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">{sugerowana_cena_procent:.2f} zł</span></td></tr>
+                    <tr><th>Marża minimalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_min:.2f}" style="color:var(--green-color);">{marza_min:.2f} PLN</span></td></tr>
+                    <tr><th>Marża maksymalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_max:.2f}" style="color:var(--green-color);">{marza_max:.2f} PLN</span></td></tr>
+                    <tr><th>Prowizja</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min:.2f}" style="color:var(--red-color);">{prowizja_min:.2f} PLN</span></td></tr>
+                    <tr><th>Min sugerowana cena (marża {marza_kwota:.2f} PLN)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">{sugerowana_cena_min:.2f} PLN</span></td></tr>
+                    <tr><th>Sugerowana cena (marża {marza_procent:.1f}%)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">{sugerowana_cena_procent:.2f} PLN</span></td></tr>
                 </table>
             </div>
             """
@@ -473,14 +430,15 @@ def index():
                 sugerowana_cena = cena_zakupu_total / 0.84
 
                 wynik_html = f"""
+                {kursy_info_html}
                 <h3>Wyniki dla kategorii G (Sklep internetowy)</h3>
                 <div class="wynik">
                     <table>
-                        <tr><th>Prowizja (bez dostawy)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max:.2f}" style="color:var(--red-color);">{prowizja_max:.2f} zł</span></td></tr>
-                        <tr><th>Prowizja z darmową wysyłką</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max + koszt_wysylki:.2f}" style="color:var(--red-color);">{(prowizja_max + koszt_wysylki):.2f} zł</span></td></tr>
-                        <tr><th>Marża przy darmowej wysyłce</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_darmowa_wysylka:.2f}" style="color:var(--green-color);">{marza_darmowa_wysylka:.2f} zł</span></td></tr>
-                        <tr><th>Marża maksymalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_maksymalna:.2f}" style="color:var(--green-color);">{marza_maksymalna:.2f} zł</span></td></tr>
-                        <tr><th>Sugerowana cena sprzedaży</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">{sugerowana_cena:.2f} zł</span></td></tr>
+                        <tr><th>Prowizja (bez dostawy)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max:.2f}" style="color:var(--red-color);">{prowizja_max:.2f} PLN</span></td></tr>
+                        <tr><th>Prowizja z darmową wysyłką</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max + koszt_wysylki:.2f}" style="color:var(--red-color);">{(prowizja_max + koszt_wysylki):.2f} PLN</span></td></tr>
+                        <tr><th>Marża przy darmowej wysyłce</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_darmowa_wysylka:.2f}" style="color:var(--green-color);">{marza_darmowa_wysylka:.2f} PLN</span></td></tr>
+                        <tr><th>Marża maksymalna</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_maksymalna:.2f}" style="color:var(--green-color);">{marza_maksymalna:.2f} PLN</span></td></tr>
+                        <tr><th>Sugerowana cena sprzedaży</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena:.2f}" style="color:var(--blue-color);">{sugerowana_cena:.2f} PLN</span></td></tr>
                     </table>
                 </div>
                 """
@@ -500,21 +458,22 @@ def index():
                 marza_najgorsza_opcja = cena_sprzedazy_total - cena_zakupu_total - prowizja_max - dostawa_maksymalna - koszt_pakowania
 
                 wynik_bez_promowania = f"""
+                {kursy_info_html}
                 <h3>Bez promowania</h3>
                 <div class="wynik">
                     <table>
-                        <tr><th>Marża (przedział dla przewoźników)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f}" style="color:var(--green-color);">{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f} zł</span><button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-bez-promowania')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button></td></tr>
-                        <tr><th>Marża w najgorszej opcji</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_najgorsza_opcja:.2f}" style="color:var(--orange-color);">{marza_najgorsza_opcja:.2f} zł</span></td></tr>
-                        <tr><th>Prowizja czysta (bez dostawy)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min:.2f}" style="color:var(--red-color);">{prowizja_min:.2f} zł</span></td></tr>
-                        <tr><th>Prowizja z dostawą minimalną</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min + dostawa_minimalna:.2f}" style="color:var(--red-color);">{(prowizja_min + dostawa_minimalna):.2f} zł</span></td></tr>
-                        <tr><th>Prowizja z dostawą maksymalną</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max + dostawa_maksymalna:.2f}" style="color:var(--red-color);">{(prowizja_max + dostawa_maksymalna):.2f} zł</span></td></tr>
-                        <tr><th>Min sugerowana cena (marża {marza_kwota:.2f} zł)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">{sugerowana_cena_min:.2f} zł</span></td></tr>
-                        <tr><th>Sugerowana cena (marża {marza_procent:.1f}%)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">{sugerowana_cena_procent:.2f} zł</span></td></tr>
+                        <tr><th>Marża (przedział dla przewoźników)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f}" style="color:var(--green-color);">{marza_min_przewoznicy:.2f} - {marza_max_przewoznicy:.2f} PLN</span><button class="toggle-tabela" onclick="toggleTabela('tabela-przewoznicy-bez-promowania')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button></td></tr>
+                        <tr><th>Marża w najgorszej opcji</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{marza_najgorsza_opcja:.2f}" style="color:var(--orange-color);">{marza_najgorsza_opcja:.2f} PLN</span></td></tr>
+                        <tr><th>Prowizja czysta (bez dostawy)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min:.2f}" style="color:var(--red-color);">{prowizja_min:.2f} PLN</span></td></tr>
+                        <tr><th>Prowizja z dostawą minimalną</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_min + dostawa_minimalna:.2f}" style="color:var(--red-color);">{(prowizja_min + dostawa_minimalna):.2f} PLN</span></td></tr>
+                        <tr><th>Prowizja z dostawą maksymalną</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{prowizja_max + dostawa_maksymalna:.2f}" style="color:var(--red-color);">{(prowizja_max + dostawa_maksymalna):.2f} PLN</span></td></tr>
+                        <tr><th>Min sugerowana cena (marża {marza_kwota:.2f} PLN)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_min:.2f}" style="color:var(--blue-color);">{sugerowana_cena_min:.2f} PLN</span></td></tr>
+                        <tr><th>Sugerowana cena (marża {marza_procent:.1f}%)</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{sugerowana_cena_procent:.2f}" style="color:var(--blue-color);">{sugerowana_cena_procent:.2f} PLN</span></td></tr>
                     </table>
                 </div>
                 """
                 
-                tabela_przewoznikow = "".join([f'<tr><td>{p}</td><td>{k:.2f} zł</td><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min - k - koszt_pakowania:.2f}" style="color:var(--green-color);">{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - k - koszt_pakowania):.2f} zł</span></td></tr>' for p, k in koszty_dostaw.items()])
+                tabela_przewoznikow = "".join([f'<tr><td>{p}</td><td>{k:.2f} PLN</td><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_sprzedazy_total - cena_zakupu_total - prowizja_min - k - koszt_pakowania:.2f}" style="color:var(--green-color);">{(cena_sprzedazy_total - cena_zakupu_total - prowizja_min - k - koszt_pakowania):.2f} PLN</span></td></tr>' for p, k in koszty_dostaw.items()])
                 
                 wynik_przewoznicy = f"""
                 <div id="tabela-przewoznicy-bez-promowania" class="rozwijana-tabela" style="display: none;">
@@ -526,15 +485,17 @@ def index():
 
         historia_wpis = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'cena_zakupu': zamien_przecinek_na_kropke(form_marza.cena_zakupu.data),
-            'mnoznik_zakupu': mnoznik_zakupu if mnoznik_zakupu else 1.0,
-            'cena_sprzedazy': zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data),
-            'mnoznik_sprzedazy': mnoznik_sprzedazy if mnoznik_sprzedazy else 1.0,
+            'cena_zakupu': form_marza.cena_zakupu.data,
+            'mnoznik_zakupu': form_marza.mnoznik_zakupu.data,
+            'waluta_zakupu': form_marza.waluta_zakupu.data,
+            'cena_sprzedazy': form_marza.cena_sprzedazy.data,
+            'mnoznik_sprzedazy': form_marza.mnoznik_sprzedazy.data,
+            'waluta_sprzedazy': form_marza.waluta_sprzedazy.data,
             'kategoria': kategoria,
-            'marza_kwota': marza_kwota,
-            'marza_procent': marza_procent,
+            'marza_kwota': form_marza.marza_kwota.data,
+            'marza_procent': form_marza.marza_procent.data,
             'czy_smart': czy_smart,
-            'koszt_pakowania': koszt_pakowania
+            'koszt_pakowania': form_marza.koszt_pakowania.data
         }
         session['historia_marz'].insert(0, historia_wpis)
         session['historia_marz'] = session['historia_marz'][:10]
@@ -542,8 +503,8 @@ def index():
 
     # KALKULATOR ZAKUPU (Odwrócony)
     if form_zakup.submit_zakup.data and form_zakup.validate():
-        cena_sprz = zamien_przecinek_na_kropke(form_zakup.cena_sprzedazy_docelowa.data)
-        marza_doc = zamien_przecinek_na_kropke(form_zakup.oczekiwana_marza.data)
+        cena_sprz_wpis = zamien_przecinek_na_kropke(form_zakup.cena_sprzedazy_docelowa.data)
+        marza_doc_pln = zamien_przecinek_na_kropke(form_zakup.oczekiwana_marza.data)
         kat = form_zakup.kategoria_zakup.data
         inna_prow = form_zakup.inna_prowizja_zakup.data
         kat_podst = form_zakup.kategoria_podstawowa_zakup.data if kat == "I" else None
@@ -551,86 +512,128 @@ def index():
         kwota_dost_ns = zamien_przecinek_na_kropke(form_zakup.kwota_dostawy_smart_zakup.data) if form_zakup.kwota_dostawy_smart_zakup.data else 0
         koszt_pak = zamien_przecinek_na_kropke(form_zakup.koszt_pakowania_zakup.data) if form_zakup.koszt_pakowania_zakup.data else 0
         
-        if kat == "H" and inna_prow:
-            inna_prow = zamien_przecinek_na_kropke(inna_prow)
+        waluta_s = form_zakup.waluta_sprzedazy_zakup.data
+        waluta_z = form_zakup.waluta_zakupu_zakup.data
+        vat_z = float(form_zakup.vat_zakup.data)
+
+        kurs_s = 1.0 if waluta_s == 'PLN' else (rates_cache.get(waluta_s) or pobierz_kurs_waluty(waluta_s) or 1.0)
+        kurs_z = 1.0 if waluta_z == 'PLN' else (rates_cache.get(waluta_z) or pobierz_kurs_waluty(waluta_z) or 1.0)
+        
+        cena_sprz_pln = cena_sprz_wpis * kurs_s
+
+        if kat == "H" and inna_prow: inna_prow = zamien_przecinek_na_kropke(inna_prow)
+
+        kursy_info_html = ""
+        if waluta_s != 'PLN' or waluta_z != 'PLN':
+            kursy_info_html = "<div style='font-size: 0.9em; margin-bottom: 15px; padding: 10px; background-color: var(--table-header-bg); border-radius: 4px;'>"
+            if waluta_s != 'PLN': kursy_info_html += f"Kurs sprzedaży: 1 {waluta_s} = {kurs_s:.4f} PLN<br>"
+            if waluta_z != 'PLN': kursy_info_html += f"Kurs zakupu: 1 {waluta_z} = {kurs_z:.4f} PLN"
+            kursy_info_html += "</div>"
 
         if not czy_smart_zakup and kat not in ["G", "I"]:
-            cena_sprzedazy_z_dostawa = cena_sprz + kwota_dost_ns
+            cena_sprzedazy_z_dostawa = cena_sprz_pln + kwota_dost_ns
             prowizja_min, _ = oblicz_prowizje(kat, cena_sprzedazy_z_dostawa, promowanie=False, inna_prowizja=inna_prow if kat == "H" else None)
-            cena_zakupu_wymagana = cena_sprz - prowizja_min - kwota_dost_ns - koszt_pak - marza_doc
+            cena_zakupu_wymagana_pln = cena_sprz_pln - prowizja_min - kwota_dost_ns - koszt_pak - marza_doc_pln
+            
+            cena_z_wal = cena_zakupu_wymagana_pln / kurs_z
+            cena_z_netto = cena_z_wal / (1 + vat_z / 100)
             
             wynik_zakup_html = f"""
+            {kursy_info_html}
             <h3>Wynik kalkulacji (tryb nie-smart)</h3>
             <div class="wynik">
                 <table>
                     <tr>
                         <th>Maksymalna cena zakupu</th>
-                        <td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_zakupu_wymagana:.2f}" style="color:var(--green-color); font-weight:bold;">{cena_zakupu_wymagana:.2f} zł</span></td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_z_wal:.2f}" style="color:var(--green-color); font-weight:bold;">{cena_z_wal:.2f} {waluta_z} brutto</span><br>
+                            <span style="font-size: 0.85em; color:var(--text-color);">({cena_z_netto:.2f} {waluta_z} netto)</span>
+                        </td>
                     </tr>
                 </table>
             </div>
             """
             session['wynik_zakup'] = wynik_zakup_html
         elif kat == "G":
-            prowizja_min, prowizja_max = oblicz_prowizje(kat, cena_sprz, promowanie=False)
-            koszt_wys = oblicz_koszt_wysylki(cena_sprz)
-            cena_zakupu_darmowa_wys = cena_sprz - prowizja_max - koszt_wys - koszt_pak - marza_doc
-            cena_zakupu_bez_wys = cena_sprz - prowizja_max - koszt_pak - marza_doc
+            prowizja_min, prowizja_max = oblicz_prowizje(kat, cena_sprz_pln, promowanie=False)
+            koszt_wys = oblicz_koszt_wysylki(cena_sprz_pln)
+            
+            cena_zak_darmowa_pln = cena_sprz_pln - prowizja_max - koszt_wys - koszt_pak - marza_doc_pln
+            cena_zak_bez_wys_pln = cena_sprz_pln - prowizja_max - koszt_pak - marza_doc_pln
+            
+            c1_brutto = cena_zak_darmowa_pln / kurs_z
+            c1_netto = c1_brutto / (1 + vat_z / 100)
+            
+            c2_brutto = cena_zak_bez_wys_pln / kurs_z
+            c2_netto = c2_brutto / (1 + vat_z / 100)
             
             wynik_zakup_html = f"""
+            {kursy_info_html}
             <h3>Wynik kalkulacji (Sklep internetowy)</h3>
             <div class="wynik">
                 <table>
                     <tr>
                         <th>Maksymalna cena zakupu (z darmową wysyłką)</th>
-                        <td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_zakupu_darmowa_wys:.2f}" style="color:var(--orange-color); font-weight:bold;">{cena_zakupu_darmowa_wys:.2f} zł</span></td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{c1_brutto:.2f}" style="color:var(--orange-color); font-weight:bold;">{c1_brutto:.2f} {waluta_z} brutto</span><br>
+                            <span style="font-size: 0.85em; color:var(--text-color);">({c1_netto:.2f} {waluta_z} netto)</span>
+                        </td>
                     </tr>
                     <tr>
                         <th>Maksymalna cena zakupu (bez wysyłki)</th>
-                        <td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_zakupu_bez_wys:.2f}" style="color:var(--green-color); font-weight:bold;">{cena_zakupu_bez_wys:.2f} zł</span></td>
+                        <td>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{c2_brutto:.2f}" style="color:var(--green-color); font-weight:bold;">{c2_brutto:.2f} {waluta_z} brutto</span><br>
+                            <span style="font-size: 0.85em; color:var(--text-color);">({c2_netto:.2f} {waluta_z} netto)</span>
+                        </td>
                     </tr>
                 </table>
             </div>
             """
             session['wynik_zakup'] = wynik_zakup_html
         else:
-            prowizja_min, prowizja_max = oblicz_prowizje(kat, cena_sprz, promowanie=False, inna_prowizja=inna_prow if kat == "H" else None, kategoria_podstawowa=kat_podst if kat == "I" else None)
-            dostawa_max = oblicz_dostawe_maksymalna(cena_sprz)
-            koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprz)
+            prowizja_min, prowizja_max = oblicz_prowizje(kat, cena_sprz_pln, promowanie=False, inna_prowizja=inna_prow if kat == "H" else None, kategoria_podstawowa=kat_podst if kat == "I" else None)
+            dostawa_max = oblicz_dostawe_maksymalna(cena_sprz_pln)
+            koszty_dostaw = oblicz_koszt_dostawy_dla_przewoznika(cena_sprz_pln)
             
-            cena_zakupu_najgorsza = cena_sprz - prowizja_min - dostawa_max - koszt_pak - marza_doc
+            cena_zakupu_najgorsza_pln = cena_sprz_pln - prowizja_min - dostawa_max - koszt_pak - marza_doc_pln
+            cena_najgorsza_brutto = cena_zakupu_najgorsza_pln / kurs_z
+            cena_najgorsza_netto = cena_najgorsza_brutto / (1 + vat_z / 100)
             
             ceny_z_przew = []
             for przewoznik, koszt in koszty_dostaw.items():
-                cena_z = cena_sprz - prowizja_min - koszt - koszt_pak - marza_doc
-                ceny_z_przew.append((przewoznik, koszt, cena_z))
+                cena_z_pln = cena_sprz_pln - prowizja_min - koszt - koszt_pak - marza_doc_pln
+                ceny_z_przew.append((przewoznik, koszt, cena_z_pln))
             
-            min_cena_z = min(c[2] for c in ceny_z_przew)
-            max_cena_z = max(c[2] for c in ceny_z_przew)
+            min_cena_z_pln = min(c[2] for c in ceny_z_przew)
+            max_cena_z_pln = max(c[2] for c in ceny_z_przew)
             
-            tabela_zakup_przewoznikow = "".join([f'<tr><td>{p}</td><td>{k:.2f} zł</td><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{c:.2f}" style="color:var(--green-color);">{c:.2f} zł</span></td></tr>' for p, k, c in ceny_z_przew])
+            min_c_brutto, min_c_netto = min_cena_z_pln / kurs_z, (min_cena_z_pln / kurs_z) / (1 + vat_z / 100)
+            max_c_brutto, max_c_netto = max_cena_z_pln / kurs_z, (max_cena_z_pln / kurs_z) / (1 + vat_z / 100)
+            
+            tabela_zakup_przewoznikow = ""
+            for p, k, c_pln in ceny_z_przew:
+                c_brut = c_pln / kurs_z
+                c_net = c_brut / (1 + vat_z / 100)
+                tabela_zakup_przewoznikow += f'<tr><td>{p}</td><td>{k:.2f} PLN</td><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{c_brut:.2f}" style="color:var(--green-color);">{c_brut:.2f} {waluta_z} brutto</span> <span style="font-size:0.85em; color:var(--text-color);">({c_net:.2f} {waluta_z} netto)</span></td></tr>'
             
             wynik_zakup_html = f"""
+            {kursy_info_html}
             <h3>Wynik kalkulacji zakupu</h3>
             <div class="wynik">
                 <table>
                     <tr>
                         <th>Maks. cena zakupu (najgorsza opcja)</th>
                         <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{cena_zakupu_najgorsza:.2f}" style="color:var(--orange-color); font-weight:bold;">
-                                {cena_zakupu_najgorsza:.2f} zł
-                            </span>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_najgorsza_brutto:.2f}" style="color:var(--orange-color); font-weight:bold;">{cena_najgorsza_brutto:.2f} {waluta_z} brutto</span><br>
+                            <span style="font-size: 0.85em; color:var(--text-color);">({cena_najgorsza_netto:.2f} {waluta_z} netto)</span>
                         </td>
                     </tr>
                     <tr>
                         <th>Maks. cena zakupu (przedział dla przewoźników)</th>
                         <td>
-                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" 
-                                  data-value="{min_cena_z:.2f} - {max_cena_z:.2f}" style="color:var(--green-color); font-weight:bold;">
-                                {min_cena_z:.2f} - {max_cena_z:.2f} zł
-                            </span>
-                            <button class="toggle-tabela" onclick="toggleTabela('tabela-zakup-przewoznicy')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button>
+                            <span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{min_c_brutto:.2f} - {max_c_brutto:.2f}" style="color:var(--green-color); font-weight:bold;">{min_c_brutto:.2f} - {max_c_brutto:.2f} {waluta_z} brutto</span>
+                            <button class="toggle-tabela" onclick="toggleTabela('tabela-zakup-przewoznicy')" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">pokaż szczegóły</button><br>
+                            <span style="font-size: 0.85em; color:var(--text-color);">({min_c_netto:.2f} - {max_c_netto:.2f} {waluta_z} netto)</span>
                         </td>
                     </tr>
                 </table>
@@ -707,12 +710,12 @@ def index():
         {kurs_info_html}
         <div class="wynik">
             <table>
-                <tr><th>Cena brutto za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_brutto_za_sztuke:.2f} zł</span></td></tr>
-                <tr><th>Cena brutto z dostawą za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_z_dostawa_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_brutto_z_dostawa_za_sztuke:.2f} zł</span></td></tr>
-                <tr><th>Cena netto za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_netto_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_netto_za_sztuke:.2f} zł</span></td></tr>
-                <tr><th>Koszt dostawy na sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">{koszt_dostawy_sztuka:.2f} zł</span></td></tr>
-                <tr><th>Cena brutto całkowita:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">{(cena_brutto_za_sztuke * ilosc_sztuk):.2f} zł</span></td></tr>
-                <tr><th>Cena brutto z dostawą całkowita:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">{(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.2f} zł</span></td></tr>
+                <tr><th>Cena brutto za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_brutto_za_sztuke:.2f} PLN</span></td></tr>
+                <tr><th>Cena brutto z dostawą za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_z_dostawa_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_brutto_z_dostawa_za_sztuke:.2f} PLN</span></td></tr>
+                <tr><th>Cena netto za sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_netto_za_sztuke:.2f}" style="color:var(--blue-color);">{cena_netto_za_sztuke:.2f} PLN</span></td></tr>
+                <tr><th>Koszt dostawy na sztukę:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{koszt_dostawy_sztuka:.2f}" style="color:var(--blue-color);">{koszt_dostawy_sztuka:.2f} PLN</span></td></tr>
+                <tr><th>Cena brutto całkowita:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">{(cena_brutto_za_sztuke * ilosc_sztuk):.2f} PLN</span></td></tr>
+                <tr><th>Cena brutto z dostawą całkowita:</th><td><span class="kwota-do-kopiowania" onclick="kopiujDoSchowka(this)" data-value="{cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk:.2f}" style="color:var(--blue-color);">{(cena_brutto_z_dostawa_za_sztuke * ilosc_sztuk):.2f} PLN</span></td></tr>
             </table>
         </div>
         """
@@ -725,7 +728,9 @@ def index():
         wynik_marza=session.get('wynik_marza'),
         wynik_zakup=session.get('wynik_zakup'),
         wynik_vat=session.get('wynik_vat'),
-        historia_marz=session.get('historia_marz', [])
+        historia_marz=session.get('historia_marz', []),
+        kurs_eur=rates_cache.get('EUR', 4.30),
+        kurs_czk=rates_cache.get('CZK', 0.17)
     )
 
 @app.route("/licznik", methods=["GET", "POST"])
@@ -733,7 +738,6 @@ def licznik():
     if 'dark_mode' not in session: session['dark_mode'] = False
     text = ""
     znaki = slowa = linie = 0
-    
     if request.method == "POST":
         text = request.form.get("tekst", "")
         znaki = len(text)
@@ -759,8 +763,7 @@ def porownaj():
             podobienstwo = difflib.SequenceMatcher(None, tekst1, tekst2).ratio() * 100
             roznice = "\n".join(list(difflib.Differ().compare(tekst1.splitlines(), tekst2.splitlines())))
         elif tekst1 or tekst2:
-            podobienstwo = 0.0
-            roznice = ""
+            podobienstwo = 0.0; roznice = ""
 
     return render_template("porownaj.html", tekst1=tekst1, tekst2=tekst2, roznice=roznice, statystyki1=statystyki1, statystyki2=statystyki2, podobienstwo=podobienstwo)
 
