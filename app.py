@@ -91,7 +91,7 @@ class KalkulatorMarzyForm(FlaskForm):
     marza_procent = StringField('Marża procentowa (%):', default="15")
     waluta_zakupu = SelectField('Waluta zakupu:', choices=waluty_choices, default="PLN")
     waluta_sprzedazy = SelectField('Waluta sprzedaży:', choices=waluty_choices, default="PLN")
-    submit = SubmitField('Oblicz marżę')
+    submit_marza = SubmitField('Oblicz marżę')
 
 class KalkulatorZakupuForm(FlaskForm):
     cena_sprzedazy_docelowa = StringField('Docelowa cena sprzedaży:', validators=[DataRequired()])
@@ -124,7 +124,7 @@ class KalkulatorVATForm(FlaskForm):
     data_kursu_dostawa = StringField('Data kursu (RRRR-MM-DD):', default=datetime.now().strftime('%Y-%m-%d'))
     waluta_dostawa = SelectField('Waluta:', choices=[('USD', 'USD (dolar amerykański)'), ('EUR', 'EUR (euro)'), ('GBP', 'GBP (funt brytyjski)'), ('CZK', 'CZK (korona czeska)')], default='USD')
     kurs_waluty_dostawa = StringField('Kurs waluty (1 waluta = X PLN):', default="1.0", validators=[Optional()])
-    submit = SubmitField('Oblicz VAT')
+    submit_vat = SubmitField('Oblicz VAT')
 
 class KalkulatorZbiorczyForm(FlaskForm):
     plik_csv = FileField('Prześlij plik CSV:')
@@ -343,13 +343,27 @@ def index():
     
     aktualizuj_cache_walut()
     
-    form_marza = KalkulatorMarzyForm()
-    form_zakup = KalkulatorZakupuForm()
-    form_vat = KalkulatorVATForm()
-
-    if request.method == 'GET': 
-        form_marza.czy_smart.data = True
-        form_zakup.czy_smart_zakup.data = True
+    if request.method == 'POST':
+        if 'submit_marza' in request.form:
+            form_marza = KalkulatorMarzyForm(request.form)
+            form_zakup = KalkulatorZakupuForm(formdata=None)
+            form_vat = KalkulatorVATForm(formdata=None)
+        elif 'submit_zakup' in request.form:
+            form_marza = KalkulatorMarzyForm(formdata=None)
+            form_zakup = KalkulatorZakupuForm(request.form)
+            form_vat = KalkulatorVATForm(formdata=None)
+        elif 'submit_vat' in request.form:
+            form_marza = KalkulatorMarzyForm(formdata=None)
+            form_zakup = KalkulatorZakupuForm(formdata=None)
+            form_vat = KalkulatorVATForm(request.form)
+        else:
+            form_marza = KalkulatorMarzyForm(request.form)
+            form_zakup = KalkulatorZakupuForm(request.form)
+            form_vat = KalkulatorVATForm(request.form)
+    else:
+        form_marza = KalkulatorMarzyForm(formdata=None)
+        form_zakup = KalkulatorZakupuForm(formdata=None)
+        form_vat = KalkulatorVATForm(formdata=None)
 
     if 'historia_marz' not in session: session['historia_marz'] = []
 
@@ -359,7 +373,7 @@ def index():
         if 'mnoznik_sprzedazy' not in wpis: wpis['mnoznik_sprzedazy'] = 1
 
     # KALKULATOR MARŻY (Standardowy)
-    if form_marza.submit.data and form_marza.validate():
+    if form_marza.submit_marza.data and form_marza.validate():
         cena_zakupu_wpis = zamien_przecinek_na_kropke(form_marza.cena_zakupu.data)
         mnoznik_zakupu = zamien_przecinek_na_kropke(form_marza.mnoznik_zakupu.data)
         cena_sprzedazy_wpis = zamien_przecinek_na_kropke(form_marza.cena_sprzedazy.data)
@@ -646,7 +660,7 @@ def index():
             session['wynik_zakup'] = wynik_zakup_html
 
     # KALKULATOR VAT
-    if form_vat.submit.data and form_vat.validate():
+    if form_vat.submit_vat.data and form_vat.validate():
         cena_netto = zamien_przecinek_na_kropke(form_vat.cena_netto.data)
         vat = zamien_przecinek_na_kropke(form_vat.vat.data)
         ilosc_sztuk = form_vat.ilosc_sztuk.data
